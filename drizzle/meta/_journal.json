@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1737278472486,
+      "tag": "0000_faithful_silver_surfer",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1737314170797,
+      "tag": "0001_fantastic_mulholland_black",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1737315758688,
+      "tag": "0002_dapper_trish_tilby",
+      "breakpoints": true
+    }
+  ]
+}

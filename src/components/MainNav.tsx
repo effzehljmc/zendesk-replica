@@ -1,32 +1,42 @@
-import { Bell, HelpCircle, Search, User } from 'lucide-react'
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export function MainNav() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center gap-4 px-4 md:px-6">
-        <div className="relative flex flex-1 items-center">
-          <Search className="absolute left-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder="Search for anything..."
-            className="flex h-9 w-full max-w-[500px] rounded-md border border-input bg-muted px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary pl-8"
-          />
-        </div>
+      <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
-          <button className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 w-9 hover:bg-muted">
-            <HelpCircle className="h-5 w-5" />
-          </button>
-          <button className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 w-9 hover:bg-muted">
-            <Bell className="h-5 w-5" />
-          </button>
-          <div className="relative">
-            <button className="inline-flex items-center justify-center rounded-full text-sm font-medium h-9 w-9 hover:bg-muted">
-              <User className="h-5 w-5" />
-              <span className="sr-only">Toggle user menu</span>
-            </button>
-          </div>
+          <span className="text-2xl font-bold">Zendesk Clone</span>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {user && (
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                {user.email}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
-  )
+  );
 } 
