@@ -4,22 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { Database } from '../types/supabase';
 
-export type Ticket = {
-  id: string;
-  ticket_number: string;
-  title: string;
-  description: string;
-  status: 'new' | 'open' | 'pending' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  created_at: string;
-  updated_at: string;
-  customer_id: string;
-  assigned_to_id: string | null;
-  customer: {
+export type Ticket = Database['public']['Tables']['tickets']['Row'] & {
+  customer?: {
     full_name: string;
     email: string;
   } | null;
-  assigned_to: {
+  assigned_to?: {
     full_name: string;
     email: string;
   } | null;
