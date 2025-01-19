@@ -36,14 +36,30 @@ jobs:
           PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           BACKUP_FILE="backups/backup_$(date +%Y%m%d_%H%M%S).sql"
+          
+          # Create plain SQL backup with schema and data
           pg_dump \
             -h $SUPABASE_DB_HOST \
             -p $SUPABASE_DB_PORT \
             -U $SUPABASE_DB_USER \
             -d $SUPABASE_DB_NAME \
-            -F c \
-            -f $BACKUP_FILE
-          echo "Created backup: $BACKUP_FILE"
+            --table=public.roles \
+            --table=public.profiles \
+            --table=public.user_roles \
+            --table=public.tickets \
+            --table=public.kb_articles \
+            > "$BACKUP_FILE"
+          
+          # Verify backup by checking its contents
+          echo "Verifying backup contents..."
+          echo "Tables in backup:"
+          grep "CREATE TABLE" "$BACKUP_FILE"
+          echo "Number of roles:"
+          grep "INSERT INTO public.roles" "$BACKUP_FILE" | wc -l
+          echo "Number of profiles:"
+          grep "INSERT INTO public.profiles" "$BACKUP_FILE" | wc -l
+          echo "Number of user_roles:"
+          grep "INSERT INTO public.user_roles" "$BACKUP_FILE" | wc -l
 
       - name: Commit and push backup
         env:
