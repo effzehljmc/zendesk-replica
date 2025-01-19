@@ -1,22 +1,20 @@
-import { ThemeProvider } from "./ThemeProvider"
-import { MainNav } from "./MainNav"
-import { AppSidebar } from "./AppSidebar"
+import { AppSidebar } from './AppSidebar';
+import { MainNav } from './MainNav';
 
-export function Layout({ children }: { children: React.ReactNode }) {
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+export function Layout({ children }: LayoutProps) {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem={false}
-      disableTransitionOnChange
-    >
-      <div className="relative flex min-h-screen">
+    <div className="min-h-screen bg-background">
+      <MainNav />
+      <div className="flex">
         <AppSidebar />
-        <div className="flex w-full flex-1 flex-col">
-          <MainNav />
-          <main className="flex-1">{children}</main>
-        </div>
+        <main className="flex-1 min-h-[calc(100vh-4rem)]">
+          {children}
+        </main>
       </div>
-    </ThemeProvider>
-  )
+    </div>
+  );
 } 
