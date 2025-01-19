@@ -1,0 +1,50 @@
+name: Database Backup
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    env:
+      SUPABASE_DB_HOST: aws-0-us-west-1.pooler.supabase.com
+      SUPABASE_DB_PORT: 6543
+      SUPABASE_DB_NAME: postgres
+      SUPABASE_DB_USER: postgres.mcqydqmqundbznjedbcj
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create backup directory
+        run: mkdir -p backups
+
+      - name: Create backup
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          BACKUP_FILE="backups/backup_$(date +%Y%m%d_%H%M%S).sql"
+          pg_dump \
+            -h $SUPABASE_DB_HOST \
+            -p $SUPABASE_DB_PORT \
+            -U $SUPABASE_DB_USER \
+            -d $SUPABASE_DB_NAME \
+            -F c \
+            -f $BACKUP_FILE
+          echo "Created backup: $BACKUP_FILE"
+
+      - name: Commit and push backup
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add backups/
+          git commit -m "Database backup $(date +%Y-%m-%d_%H-%M-%S)"
+          git push 
