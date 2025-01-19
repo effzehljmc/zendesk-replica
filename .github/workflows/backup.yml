@@ -15,7 +15,7 @@ jobs:
       SUPABASE_DB_HOST: aws-0-us-west-1.pooler.supabase.com
       SUPABASE_DB_PORT: 6543
       SUPABASE_DB_NAME: postgres
-      SUPABASE_DB_USER: postgres.mcqydqmqundbznjedbcj
+      SUPABASE_DB_USER: postgres.mcqydqmqundbzniedbcj
 
     steps:
       - name: Checkout repository
