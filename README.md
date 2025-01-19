@@ -31,6 +31,18 @@ A modern, AI-powered helpdesk system built with React, TypeScript, Supabase, and
   - Drizzle ORM (Type-safe DB queries)
   - PostgreSQL (Database)
 
+## Environment Setup
+
+The project uses environment variables for configuration. These are stored in `.env.local` and should contain:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+DATABASE_URL=your_database_url
+```
+
+> **Note**: The `.env.local` file is already set up in the project with the correct values. You don't need to modify it unless you're setting up a new environment.
+
 ## Getting Started
 
 ### Prerequisites

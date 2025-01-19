@@ -1,75 +1,78 @@
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+
+const stats = [
+  {
+    name: "Total Tickets",
+    value: "128",
+    change: "+14.6% from last month",
+    changeType: "positive",
+  },
+  {
+    name: "Open Tickets",
+    value: "42",
+    change: "-4% from last month",
+    changeType: "negative",
+  },
+  {
+    name: "Average Response Time",
+    value: "2.4h",
+    change: "+12 minutes from last month",
+    changeType: "neutral",
+  },
+  {
+    name: "Customer Satisfaction",
+    value: "98%",
+    change: "+2% from last month",
+    changeType: "positive",
+  },
+];
 
 export function Dashboard() {
+  const navigate = useNavigate();
+
   return (
-    <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
+            Overview of your help desk performance
+          </p>
+        </div>
       </div>
+
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="bg-card p-6 rounded-lg shadow">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Total Tickets</h3>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">128</div>
-                <p className="text-xs text-muted-foreground">
-                  +14.6% from last month
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat) => (
+            <Card key={stat.name} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/tickets")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {stat.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <p className={cn(
+                  "text-xs",
+                  stat.changeType === "positive" && "text-green-600",
+                  stat.changeType === "negative" && "text-red-600",
+                  stat.changeType === "neutral" && "text-muted-foreground"
+                )}>
+                  {stat.change}
                 </p>
-              </div>
-            </div>
-            <div className="bg-card p-6 rounded-lg shadow">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Open Tickets</h3>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">42</div>
-                <p className="text-xs text-muted-foreground">
-                  -4% from last month
-                </p>
-              </div>
-            </div>
-            <div className="bg-card p-6 rounded-lg shadow">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Average Response Time</h3>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">2.4h</div>
-                <p className="text-xs text-muted-foreground">
-                  +12 minutes from last month
-                </p>
-              </div>
-            </div>
-            <div className="bg-card p-6 rounded-lg shadow">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Customer Satisfaction</h3>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">98%</div>
-                <p className="text-xs text-muted-foreground">
-                  +2% from last month
-                </p>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-        <TabsContent value="analytics">
-          <div className="text-center py-10">
-            Analytics content coming soon...
-          </div>
-        </TabsContent>
-        <TabsContent value="reports">
-          <div className="text-center py-10">
-            Reports content coming soon...
-          </div>
-        </TabsContent>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </Tabs>
     </div>
   );

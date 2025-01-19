@@ -1,18 +1,15 @@
+import { Outlet } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { MainNav } from './MainNav';
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-export function Layout({ children }: LayoutProps) {
+export function Layout() {
   return (
     <div className="min-h-screen bg-background">
       <MainNav />
       <div className="flex">
         <AppSidebar />
         <main className="flex-1 min-h-[calc(100vh-4rem)]">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

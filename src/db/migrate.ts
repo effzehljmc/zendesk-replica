@@ -1,25 +1,26 @@
+import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { createDrizzleClient } from './server';
+import postgres from 'postgres';
+import * as dotenv from 'dotenv';
 
-// Simple logger that respects ESLint rules
-const logger = {
-  info: (message: string) => process.stdout.write(`${message}\n`),
-  error: (message: string, error?: unknown) => process.stderr.write(`${message}\n${error ? String(error) : ''}\n`),
-};
+dotenv.config({ path: '.env.local' });
 
-const runMigrations = async () => {
-  const db = createDrizzleClient();
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
 
+const sql = postgres(process.env.DATABASE_URL, { max: 1 });
+const db = drizzle(sql);
+
+async function main() {
   try {
-    await migrate(db, { migrationsFolder: 'drizzle' });
-    logger.info('Migrations completed successfully');
+    await migrate(db, { migrationsFolder: 'src/db/migrations' });
+    console.log('Migration completed successfully');
+    process.exit(0);
   } catch (error) {
-    logger.error('Error running migrations:', error);
-    throw error;
+    console.error('Migration failed:', error);
+    process.exit(1);
   }
-};
+}
 
-runMigrations().catch((err) => {
-  logger.error('Migration failed:', err);
-  process.exit(1);
-}); 
+main(); 

@@ -6,54 +6,68 @@ import { Login } from './pages/Login';
 import { SignUp } from './pages/SignUp';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
-import { Suspense } from 'react';
+import TicketsPage from '@/pages/tickets';
+import CreateTicketPage from '@/pages/tickets/create';
+import TicketDetailPage from '@/pages/tickets/[id]';
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <Routes>
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route
-            path="/dashboard/*"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <Routes>
-                      <Route index element={<Dashboard />} />
-                      <Route
-                        path="users"
-                        element={
-                          <RoleProtectedRoute allowedRoles={['admin']}>
-                            <div>Users Management (Admin Only)</div>
-                          </RoleProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="settings"
-                        element={
-                          <RoleProtectedRoute allowedRoles={['admin']}>
-                            <div>Settings (Admin Only)</div>
-                          </RoleProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="tickets/*"
-                        element={
-                          <RoleProtectedRoute allowedRoles={['admin', 'agent']}>
-                            <div>Ticket Management (Admin & Agent Only)</div>
-                          </RoleProtectedRoute>
-                        }
-                      />
-                    </Routes>
-                  </Suspense>
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            
+            {/* Admin Only Routes */}
+            <Route
+              path="/users"
+              element={
+                <RoleProtectedRoute roles={['admin']}>
+                  <div>Users Management (Admin Only)</div>
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RoleProtectedRoute roles={['admin']}>
+                  <div>Settings (Admin Only)</div>
+                </RoleProtectedRoute>
+              }
+            />
+
+            {/* Ticket Routes */}
+            <Route
+              path="/tickets"
+              element={
+                <RoleProtectedRoute roles={['admin', 'agent']}>
+                  <TicketsPage />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/tickets/create"
+              element={
+                <RoleProtectedRoute roles={['admin', 'agent']}>
+                  <CreateTicketPage />
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/tickets/:id"
+              element={
+                <RoleProtectedRoute roles={['admin', 'agent']}>
+                  <TicketDetailPage />
+                </RoleProtectedRoute>
+              }
+            />
+          </Route>
         </Routes>
       </AuthProvider>
     </Router>
