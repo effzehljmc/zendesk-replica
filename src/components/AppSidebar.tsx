@@ -22,7 +22,7 @@ export function AppSidebar() {
   const location = useLocation();
 
   return (
-    <div className="w-64 border-r bg-muted/10 min-h-[calc(100vh-4rem)]">
+    <div className="w-64 border-r bg-muted min-h-[calc(100vh-4rem)]">
       <nav className="space-y-1 p-4">
         {navigation.map((item) => {
           const isActive = location.pathname === item.href;

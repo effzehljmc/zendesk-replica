@@ -4,11 +4,11 @@ import { MainNav } from './MainNav';
 
 export function Layout() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <MainNav />
       <div className="flex">
         <AppSidebar />
-        <main className="flex-1 min-h-[calc(100vh-4rem)]">
+        <main className="flex-1">
           <Outlet />
         </main>
       </div>
