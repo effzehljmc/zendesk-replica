@@ -1,12 +1,4 @@
-import { relations } from 'drizzle-orm';
-import {
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  varchar,
-  boolean
-} from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, varchar, boolean } from "drizzle-orm/pg-core";
 
 export const roles = pgTable('roles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -52,17 +44,6 @@ export const tickets = pgTable('tickets', {
   assigned_to_id: uuid('assigned_to_id')
     .references(() => profiles.id, { onDelete: 'set null' }),
 });
-
-export const ticketsRelations = relations(tickets, ({ one }) => ({
-  customer: one(profiles, {
-    fields: [tickets.customer_id],
-    references: [profiles.id],
-  }),
-  assignedTo: one(profiles, {
-    fields: [tickets.assigned_to_id],
-    references: [profiles.id],
-  }),
-}));
 
 export const kbArticles = pgTable('kb_articles', {
   id: uuid('id').primaryKey().defaultRandom(),

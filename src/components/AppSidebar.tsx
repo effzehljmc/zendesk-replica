@@ -11,11 +11,11 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Tickets', href: '/dashboard/tickets', icon: Ticket },
-  { name: 'Knowledge Base', href: '/dashboard/knowledge-base', icon: BookOpen },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart },
-  { name: 'Users', href: '/dashboard/users', icon: Users },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Tickets', href: '/tickets', icon: Ticket },
+  { name: 'Knowledge Base', href: '/knowledge-base', icon: BookOpen },
+  { name: 'Analytics', href: '/analytics', icon: BarChart },
+  { name: 'Users', href: '/users', icon: Users },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export function AppSidebar() {
