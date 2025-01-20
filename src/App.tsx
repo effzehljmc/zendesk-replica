@@ -9,6 +9,9 @@ import { Dashboard } from './pages/Dashboard';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminDashboard } from './pages/admin/Dashboard';
 import { AdminSettings } from './pages/admin/Settings';
+import AdminUsers from './pages/admin/Users';
+import UserDetail from './pages/admin/UserDetail';
+import UserEdit from './pages/admin/UserEdit';
 import { Toaster } from './components/ui/toaster';
 import TicketsPage from '@/pages/tickets';
 import CreateTicketPage from '@/pages/tickets/create';
@@ -39,7 +42,9 @@ function App() {
             {/* Admin Only Routes */}
             <Route path="/admin" element={<RoleProtectedRoute roles={['admin']}><AdminLayout /></RoleProtectedRoute>}>
               <Route index element={<AdminDashboard />} />
-              <Route path="users" element={<div>Users Management (Admin Only)</div>} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="users/:id" element={<UserDetail />} />
+              <Route path="users/:id/edit" element={<UserEdit />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="knowledge-base" element={<div>Knowledge Base Management</div>} />
             </Route>
