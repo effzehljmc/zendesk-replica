@@ -14,8 +14,8 @@ const navigation = [
   { name: 'Tickets', href: '/tickets', icon: Ticket },
   { name: 'Knowledge Base', href: '/knowledge-base', icon: BookOpen },
   { name: 'Analytics', href: '/analytics', icon: BarChart },
-  { name: 'Users', href: '/users', icon: Users },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Users', href: '/admin/users', icon: Users },
+  { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 export function AppSidebar() {

@@ -11,20 +11,44 @@ A modern, AI-powered helpdesk system built with React, TypeScript, Supabase, and
 - 📝 Automatic user profile creation
 - 🔄 Session persistence
 
+### Ticket Management
+- 📋 Ticket listing with search and filters
+- 🔍 Status and priority filtering
+- 📊 Sortable table view
+- ✏️ Ticket creation and editing
+- 👤 Agent assignment
+- 📈 Status and priority updates
+- 🔒 Role-based access (Admin/Agent only)
+
 ### Core Functionality
 - 📊 Dashboard with key metrics
-- 🎫 Ticket management system
-- 📚 Knowledge base articles
-- 📈 Analytics and reporting
-- 👥 User management
+  - Ticket statistics cards
+  - Quick navigation to ticket management
+  - Role-specific views
+- 👥 User Management (Admin only)
+  - User role assignment
+  - Profile management
+- ⚙️ Settings Management (Admin only)
+  - System configuration
+  - Role management
+
+### UI Components
+- 🎨 Modern UI with Tailwind CSS
+- 🔄 Loading states and error handling
+- 📱 Responsive design
+- 🎯 Accessible components using Radix UI
+- 🌙 Dark mode support (planned)
 
 ## Tech Stack
 
 - **Frontend:**
-  - React + TypeScript
+  - React 18 + TypeScript
   - Vite (Build tool)
-  - TailwindCSS (Styling)
-  - React Router (Navigation)
+  - TailwindCSS + shadcn/ui (Styling)
+  - React Router v6 (Navigation)
+  - React Hook Form (Form handling)
+  - Radix UI (Accessible components)
+  - Lucide React (Icons)
 
 - **Backend:**
   - Supabase (Database & Auth)
@@ -84,9 +108,12 @@ npm run dev
 
 The project uses Supabase as the database with the following main tables:
 
-1. \`profiles\` - User profiles and roles
-2. \`tickets\` - Support tickets
-3. \`kb_articles\` - Knowledge base articles
+1. `profiles` - User profiles
+2. `user_roles` - Role assignments for users
+3. `roles` - Role definitions (admin, agent, customer)
+4. `tickets` - Support tickets
+5. `kb_articles` - Knowledge base articles
+6. `settings` - System-wide configuration settings
 
 Migrations are handled by Drizzle ORM.
 
@@ -147,3 +174,49 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Inspired by Zendesk's functionality
 - Built with modern web technologies
 - Designed for scalability and maintainability
+
+## Recent Updates
+
+### Admin Dashboard Improvements
+- Enhanced ticket statistics with real-time updates
+- Fixed user count calculations using proper role-based filtering
+- Added 30-day ticket activity visualization
+- Improved error handling and loading states
+
+### Settings Management
+- Added system-wide settings management
+- Implemented settings table for storing configuration
+- Created admin interface for managing settings
+- Added role-based access control for settings
+
+### Technical Improvements
+- Fixed TypeScript type definitions across components
+- Improved error handling in admin statistics
+- Enhanced database queries with proper joins and filtering
+- Added proper role-based filtering for user counts
+- Implemented proper error boundaries and loading states
+
+## Planned Features
+
+### Knowledge Base
+- 📚 Article creation and management
+- 🔍 Search functionality
+- 🏷️ Categories and tags
+- 👁️ Public/private visibility
+- 📜 Version history
+
+### Ticket Enhancements
+- 💬 Comments and updates
+- 📎 File attachments
+- ⏰ SLA tracking
+- 📨 Email notifications
+- 📊 Advanced reporting
+- 🤖 AI automation
+
+### User Experience
+- 🌙 Dark mode
+- 📱 Mobile optimization
+- 🔔 Toast notifications
+- ✅ Confirmation dialogs
+- 🔍 Global search
+- 📋 Saved views
