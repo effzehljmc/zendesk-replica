@@ -8,8 +8,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Create a single instance of the Supabase client
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
+    storageKey: 'zendesk-clone-auth',
   },
-}); 
+});
+
+// Prevent creating multiple instances
+Object.freeze(supabase); 

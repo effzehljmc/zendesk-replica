@@ -6,13 +6,24 @@ import { Login } from './pages/Login';
 import { SignUp } from './pages/SignUp';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
+import { AdminLayout } from './components/AdminLayout';
+import { AdminDashboard } from './pages/admin/Dashboard';
+import { AdminSettings } from './pages/admin/Settings';
 import TicketsPage from '@/pages/tickets';
 import CreateTicketPage from '@/pages/tickets/create';
 import TicketDetailPage from '@/pages/tickets/[id]';
 
+// Enable future flags for React Router
+const router = {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+  },
+};
+
 function App() {
   return (
-    <Router>
+    <Router {...router}>
       <AuthProvider>
         <Routes>
           {/* Public Routes */}
@@ -25,47 +36,25 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             
             {/* Admin Only Routes */}
-            <Route
-              path="/users"
-              element={
-                <RoleProtectedRoute roles={['admin']}>
-                  <div>Users Management (Admin Only)</div>
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <RoleProtectedRoute roles={['admin']}>
-                  <div>Settings (Admin Only)</div>
-                </RoleProtectedRoute>
-              }
-            />
+            <Route path="/admin" element={<RoleProtectedRoute roles={['admin']}><AdminLayout /></RoleProtectedRoute>}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<div>Users Management (Admin Only)</div>} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="knowledge-base" element={<div>Knowledge Base Management</div>} />
+            </Route>
 
             {/* Ticket Routes */}
             <Route
               path="/tickets"
-              element={
-                <RoleProtectedRoute roles={['admin', 'agent']}>
-                  <TicketsPage />
-                </RoleProtectedRoute>
-              }
+              element={<RoleProtectedRoute roles={['admin', 'agent']}><TicketsPage /></RoleProtectedRoute>}
             />
             <Route
               path="/tickets/create"
-              element={
-                <RoleProtectedRoute roles={['admin', 'agent']}>
-                  <CreateTicketPage />
-                </RoleProtectedRoute>
-              }
+              element={<RoleProtectedRoute roles={['admin', 'agent']}><CreateTicketPage /></RoleProtectedRoute>}
             />
             <Route
               path="/tickets/:id"
-              element={
-                <RoleProtectedRoute roles={['admin', 'agent']}>
-                  <TicketDetailPage />
-                </RoleProtectedRoute>
-              }
+              element={<RoleProtectedRoute roles={['admin', 'agent']}><TicketDetailPage /></RoleProtectedRoute>}
             />
           </Route>
         </Routes>

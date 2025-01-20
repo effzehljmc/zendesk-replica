@@ -5,7 +5,8 @@ import {
   timestamp,
   uuid,
   boolean,
-  serial
+  serial,
+  jsonb
 } from 'drizzle-orm/pg-core';
 
 export const roles = pgTable('roles', {
@@ -74,4 +75,15 @@ export const kbArticles = pgTable('kb_articles', {
     .references(() => profiles.id, { onDelete: 'cascade' }),
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const settings = pgTable('settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  value: jsonb('value').notNull(),
+  description: text('description'),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull(),
+  updated_by_id: uuid('updated_by_id')
+    .references(() => profiles.id, { onDelete: 'set null' }),
 }); 
