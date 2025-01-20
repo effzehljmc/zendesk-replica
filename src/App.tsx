@@ -9,6 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminDashboard } from './pages/admin/Dashboard';
 import { AdminSettings } from './pages/admin/Settings';
+import { Toaster } from './components/ui/toaster';
 import TicketsPage from '@/pages/tickets';
 import CreateTicketPage from '@/pages/tickets/create';
 import TicketDetailPage from '@/pages/tickets/[id]';
@@ -58,6 +59,7 @@ function App() {
             />
           </Route>
         </Routes>
+        <Toaster />
       </AuthProvider>
     </Router>
   );

@@ -1,5 +1,7 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -13,6 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { ticket, isLoading, error, updateTicket } = useTicket(id!);
   const { agents, isLoading: agentsLoading } = useAgents();
   const { profile } = useAuth();
@@ -55,6 +58,15 @@ export default function TicketDetailPage() {
 
   return (
     <div className="p-6">
+      <Button
+        variant="ghost"
+        className="mb-6"
+        onClick={() => navigate("/tickets")}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Tickets
+      </Button>
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Ticket #{ticket.ticket_number}</h1>
         <h2 className="text-xl">{ticket.title}</h2>
