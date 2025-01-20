@@ -52,8 +52,23 @@ export function useTicket(ticketId: string) {
           table: 'tickets',
           filter: `id=eq.${ticketId}`,
         },
-        () => {
-          fetchTicket(); // Refetch ticket when it changes
+        async (payload) => {
+          // Immediately update the local state with the new data
+          if (payload.eventType === 'UPDATE') {
+            const { data, error } = await supabase
+              .from('tickets')
+              .select(`
+                *,
+                customer:profiles!customer_id(full_name, email),
+                assigned_to:profiles!assigned_to_id(full_name, email)
+              `)
+              .eq('id', ticketId)
+              .single();
+            
+            if (!error && data) {
+              setTicket(data);
+            }
+          }
         }
       )
       .subscribe();
@@ -71,6 +86,14 @@ export function useTicket(ticketId: string) {
         .eq('id', ticketId);
 
       if (error) throw error;
+
+      // Optimistically update the local state
+      if (ticket) {
+        setTicket({
+          ...ticket,
+          ...data,
+        });
+      }
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to update ticket');
     }
