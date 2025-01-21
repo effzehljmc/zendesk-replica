@@ -76,16 +76,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) throw error;
+
+    // Wait for the session to be established
+    const session = await supabase.auth.getSession();
+    if (!session.data.session?.user) {
+      throw new Error('Failed to establish session');
+    }
+
+    // Fetch and set the user profile
+    const userProfile = await fetchUserProfile(session.data.session.user.id);
+    setUser(session.data.session.user);
+    setProfile(userProfile);
   };
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    setUser(null);
+    setProfile(null);
   };
 
   const value = {

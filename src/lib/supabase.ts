@@ -8,13 +8,28 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Create a single instance of the Supabase client
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    storageKey: 'zendesk-clone-auth',
-  },
-});
+// Create a single instance of the Supabase client using a closure
+const createSupabaseClient = () => {
+  let instance: ReturnType<typeof createClient<Database>> | null = null;
 
-// Prevent creating multiple instances
-Object.freeze(supabase); 
+  return () => {
+    if (!instance) {
+      instance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          storageKey: 'zendesk-replica-auth',
+          storage: window.localStorage,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        },
+      });
+    }
+    return instance;
+  };
+};
+
+// Export the singleton getter
+const getSupabase = createSupabaseClient();
+
+// Export the singleton instance
+export const supabase = getSupabase(); 

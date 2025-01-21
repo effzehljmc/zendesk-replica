@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.cursorrules
+GauntletAI Project 2 - AutoCRM.md
+.gitignore

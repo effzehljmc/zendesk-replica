@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -11,8 +11,6 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkRoles() {
   try {

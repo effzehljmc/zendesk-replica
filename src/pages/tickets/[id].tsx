@@ -9,9 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTicket } from '../../hooks/useTicket';
-import { useAgents } from '../../hooks/useAgents';
-import { useAuth } from '../../contexts/AuthContext';
+import { useTicket } from '@/hooks/useTicket';
+import { useAgents } from '@/hooks/useAgents';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import { TagSelector } from '@/components/ui/tag-selector';
+import { TicketNotes } from '@/components/ticket/TicketNotes';
+import { Tag } from '@/types/ticket';
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +23,7 @@ export default function TicketDetailPage() {
   const { ticket, isLoading, error, updateTicket } = useTicket(id!);
   const { agents, isLoading: agentsLoading } = useAgents();
   const { profile } = useAuth();
+  const { toast } = useToast();
 
   if (isLoading) {
     return <div className="p-6">Loading ticket...</div>;
@@ -30,25 +35,69 @@ export default function TicketDetailPage() {
 
   const handleStatusChange = async (newStatus: string) => {
     try {
-      await updateTicket({ status: newStatus as 'new' | 'open' | 'in-progress' | 'resolved' });
+      await updateTicket({ status: newStatus as 'new' | 'open' | 'pending' | 'resolved' });
+      toast({
+        title: 'Success',
+        description: 'Status updated successfully',
+      });
     } catch (err) {
       console.error('Failed to update status:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to update status',
+        variant: 'destructive',
+      });
     }
   };
 
   const handlePriorityChange = async (newPriority: string) => {
     try {
       await updateTicket({ priority: newPriority as 'low' | 'medium' | 'high' });
+      toast({
+        title: 'Success',
+        description: 'Priority updated successfully',
+      });
     } catch (err) {
       console.error('Failed to update priority:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to update priority',
+        variant: 'destructive',
+      });
     }
   };
 
   const handleAssigneeChange = async (newAssigneeId: string) => {
     try {
       await updateTicket({ assigned_to_id: newAssigneeId === 'unassigned' ? null : newAssigneeId });
+      toast({
+        title: 'Success',
+        description: 'Assignee updated successfully',
+      });
     } catch (err) {
       console.error('Failed to update assignee:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to update assignee',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleTagsChange = async (newTags: Tag[]) => {
+    try {
+      await updateTicket({ tags: newTags.map(t => t.id) });
+      toast({
+        title: 'Success',
+        description: 'Tags updated successfully',
+      });
+    } catch (err) {
+      console.error('Failed to update tags:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to update tags',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -72,9 +121,9 @@ export default function TicketDetailPage() {
         <h2 className="text-xl">{ticket.title}</h2>
       </div>
 
-      <div className="grid grid-cols-3 gap-6 mb-6">
-        <div className="relative">
-          <div className="text-sm text-gray-500 mb-2">Status</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="space-y-2">
+          <div className="text-sm text-muted-foreground">Status</div>
           {canManageTicket ? (
             <Select
               value={ticket.status}
@@ -86,7 +135,7 @@ export default function TicketDetailPage() {
               <SelectContent>
                 <SelectItem value="new">New</SelectItem>
                 <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
               </SelectContent>
             </Select>
@@ -95,8 +144,8 @@ export default function TicketDetailPage() {
           )}
         </div>
 
-        <div className="relative">
-          <div className="text-sm text-gray-500 mb-2">Priority</div>
+        <div className="space-y-2">
+          <div className="text-sm text-muted-foreground">Priority</div>
           {canManageTicket ? (
             <Select
               value={ticket.priority}
@@ -109,6 +158,7 @@ export default function TicketDetailPage() {
                 <SelectItem value="low">Low</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="high">High</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
               </SelectContent>
             </Select>
           ) : (
@@ -116,8 +166,8 @@ export default function TicketDetailPage() {
           )}
         </div>
 
-        <div className="relative">
-          <div className="text-sm text-gray-500 mb-2">Assigned To</div>
+        <div className="space-y-2">
+          <div className="text-sm text-muted-foreground">Assigned To</div>
           {canManageTicket ? (
             <Select
               value={ticket.assigned_to_id || 'unassigned'}
@@ -143,21 +193,36 @@ export default function TicketDetailPage() {
       </div>
 
       <div className="space-y-6">
-        <div>
-          <div className="text-sm text-gray-500 mb-2">Customer</div>
+        {canManageTicket && (
+          <div className="space-y-2">
+            <div className="text-sm text-muted-foreground">Tags</div>
+            <TagSelector
+              selectedTags={ticket.tags || []}
+              onTagsChange={handleTagsChange}
+              maxTags={3}
+            />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <div className="text-sm text-muted-foreground">Customer</div>
           <div>{ticket.customer?.full_name} ({ticket.customer?.email})</div>
         </div>
 
-        <div>
-          <div className="text-sm text-gray-500 mb-2">Description</div>
-          <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap">
+        <div className="space-y-2">
+          <div className="text-sm text-muted-foreground">Description</div>
+          <div className="bg-muted/50 p-4 rounded-lg whitespace-pre-wrap">
             {ticket.description}
           </div>
         </div>
 
-        <div>
-          <div className="text-sm text-gray-500 mb-2">Created</div>
+        <div className="space-y-2">
+          <div className="text-sm text-muted-foreground">Created</div>
           <div>{new Date(ticket.created_at).toLocaleString()}</div>
+        </div>
+
+        <div className="border-t pt-6">
+          <TicketNotes ticketId={ticket.id} />
         </div>
       </div>
     </div>

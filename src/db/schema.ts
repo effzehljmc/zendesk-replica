@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   pgTable,
   text,
@@ -6,7 +6,10 @@ import {
   uuid,
   boolean,
   serial,
-  jsonb
+  jsonb,
+  integer,
+  check,
+  uniqueIndex
 } from 'drizzle-orm/pg-core';
 
 export const roles = pgTable('roles', {
@@ -54,16 +57,40 @@ export const tickets = pgTable('tickets', {
   updated_at: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const ticketsRelations = relations(tickets, ({ one }) => ({
-  customer: one(profiles, {
-    fields: [tickets.customer_id],
-    references: [profiles.id],
-  }),
-  assignedTo: one(profiles, {
-    fields: [tickets.assigned_to_id],
-    references: [profiles.id],
-  }),
-}));
+export const tags = pgTable('tags', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  color: text('color').notNull().default('#94a3b8'),
+  usage_count: integer('usage_count').notNull().default(0),
+  last_used_at: timestamp('last_used_at'),
+  created_by_id: uuid('created_by_id')
+    .references(() => profiles.id, { onDelete: 'set null' }),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull(),
+}, () => {
+  return {
+    name_length: check('tag_name_length', sql`char_length(name) BETWEEN 2 AND 30`),
+    name_format: check('tag_name_format', sql`name ~ '^[a-zA-Z0-9\s\-_]+$'`),
+    color_format: check('tag_color_format', sql`color ~ '^#[0-9A-Fa-f]{6}$'`),
+  }
+});
+
+export const ticketTags = pgTable('ticket_tags', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ticket_id: uuid('ticket_id')
+    .notNull()
+    .references(() => tickets.id, { onDelete: 'cascade' }),
+  tag_id: uuid('tag_id')
+    .notNull()
+    .references(() => tags.id, { onDelete: 'cascade' }),
+  created_by_id: uuid('created_by_id')
+    .references(() => profiles.id, { onDelete: 'set null' }),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    ticket_tag_unique: uniqueIndex('ticket_tag_unique').on(table.ticket_id, table.tag_id),
+  }
+});
 
 export const kbArticles = pgTable('kb_articles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -86,4 +113,66 @@ export const settings = pgTable('settings', {
   updated_at: timestamp('updated_at').defaultNow().notNull(),
   updated_by_id: uuid('updated_by_id')
     .references(() => profiles.id, { onDelete: 'set null' }),
-}); 
+});
+
+export const ticketNotes = pgTable('ticket_notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ticketId: uuid('ticket_id')
+    .notNull()
+    .references(() => tickets.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  visibility: text('visibility', { enum: ['private', 'team', 'public'] })
+    .notNull()
+    .default('private'),
+  createdById: uuid('created_by_id')
+    .references(() => profiles.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const tagsRelations = relations(tags, ({ one, many }) => ({
+  createdBy: one(profiles, {
+    fields: [tags.created_by_id],
+    references: [profiles.id],
+  }),
+  tickets: many(ticketTags),
+}));
+
+export const ticketTagsRelations = relations(ticketTags, ({ one }) => ({
+  ticket: one(tickets, {
+    fields: [ticketTags.ticket_id],
+    references: [tickets.id],
+  }),
+  tag: one(tags, {
+    fields: [ticketTags.tag_id],
+    references: [tags.id],
+  }),
+  createdBy: one(profiles, {
+    fields: [ticketTags.created_by_id],
+    references: [profiles.id],
+  }),
+}));
+
+export const ticketNotesRelations = relations(ticketNotes, ({ one }) => ({
+  ticket: one(tickets, {
+    fields: [ticketNotes.ticketId],
+    references: [tickets.id],
+  }),
+  createdBy: one(profiles, {
+    fields: [ticketNotes.createdById],
+    references: [profiles.id],
+  }),
+}));
+
+export const ticketsRelations = relations(tickets, ({ one, many }) => ({
+  customer: one(profiles, {
+    fields: [tickets.customer_id],
+    references: [profiles.id],
+  }),
+  assignedTo: one(profiles, {
+    fields: [tickets.assigned_to_id],
+    references: [profiles.id],
+  }),
+  tags: many(ticketTags),
+  notes: many(ticketNotes),
+})); 

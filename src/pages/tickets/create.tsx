@@ -1,39 +1,89 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreateTicketForm } from "@/components/tickets/CreateTicketForm";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { CreateTicketData } from "@/types/ticket";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import { TagSelector } from "@/components/ui/tag-selector";
+import { useTags } from "@/hooks/useTags";
+import type { Tag } from "@/types/ticket";
 
 export default function CreateTicketPage() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("medium");
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const { profile } = useAuth();
+  const { toast } = useToast();
+  const { tags } = useTags();
 
-  const handleSubmit = async (data: CreateTicketData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!profile) {
-      console.error("No user profile found");
+      toast({
+        title: "Error",
+        description: "No user profile found",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("tickets").insert({
-        title: data.title,
-        description: data.description,
-        priority: data.priority,
-        status: "new",
-        customer_id: profile.id,
-      });
+      // First create the ticket
+      const { data: ticket, error: ticketError } = await supabase
+        .from("tickets")
+        .insert({
+          title,
+          description,
+          priority,
+          status: "new",
+          customer_id: profile.id,
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
-      
+      if (ticketError) throw ticketError;
+
+      // Then create the ticket-tag relationships if tags are provided
+      if (selectedTags.length > 0) {
+        const { error: tagError } = await supabase
+          .from("ticket_tags")
+          .insert(
+            selectedTags.map(tag => ({
+              ticket_id: ticket.id,
+              tag_id: tag.id,
+              created_by_id: profile.id,
+            }))
+          );
+
+        if (tagError) throw tagError;
+      }
+
+      toast({
+        title: "Success",
+        description: "Ticket created successfully",
+      });
       navigate("/tickets");
     } catch (error) {
       console.error("Failed to create ticket:", error);
-      // TODO: Add proper error toast notification
+      toast({
+        title: "Error",
+        description: "Failed to create ticket",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -59,7 +109,64 @@ export default function CreateTicketPage() {
       </div>
 
       <div className="rounded-lg border p-4">
-        <CreateTicketForm onSubmit={handleSubmit} isLoading={isSubmitting} />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label htmlFor="title" className="text-sm font-medium">
+              Title
+            </label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter ticket title"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="description" className="text-sm font-medium">
+              Description
+            </label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe your issue..."
+              className="min-h-[100px]"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="priority" className="text-sm font-medium">
+              Priority
+            </label>
+            <Select value={priority} onValueChange={setPriority}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Tags</label>
+            <TagSelector
+              selectedTags={selectedTags}
+              onTagsChange={setSelectedTags}
+              maxTags={3}
+            />
+          </div>
+
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Ticket"}
+          </Button>
+        </form>
       </div>
     </div>
   );
