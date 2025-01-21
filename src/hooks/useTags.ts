@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Tag } from '@/types';
+import type { Tag } from '@/types/ticket';
 import { useToast } from '@/components/ui/use-toast';
 import { PostgrestResponse } from '@supabase/supabase-js';
 
