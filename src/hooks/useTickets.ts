@@ -1,63 +1,37 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
-import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { Database } from '../types/supabase';
+import { supabase } from '@/lib/supabase';
+import type { Ticket, Tag } from '@/types/ticket';
 
-export type Ticket = Database['public']['Tables']['tickets']['Row'] & {
+interface TicketResponse {
+  id: string;
+  ticket_number: string;
+  title: string;
+  description: string;
+  priority: Ticket['priority'];
+  status: Ticket['status'];
+  created_at: string;
+  updated_at: string;
+  customer_id: string;
+  assigned_to_id: string | null;
   customer?: {
     full_name: string;
     email: string;
-  } | null;
+  };
   assigned_to?: {
     full_name: string;
-    email: string;
-  } | null;
-};
+  };
+  tags: { tag: Tag }[];
+}
 
 export function useTickets() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const { profile } = useAuth();
 
   useEffect(() => {
-    async function fetchTickets() {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        let query = supabase
-          .from('tickets')
-          .select(`
-            *,
-            customer:profiles!customer_id(full_name, email),
-            assigned_to:profiles!assigned_to_id(full_name, email)
-          `);
-
-        // If user is a customer, only show their tickets
-        if (profile?.roles.some(role => role.name === 'customer')) {
-          query = query.eq('customer_id', profile.id);
-        }
-
-        const { data, error: supabaseError } = await query;
-
-        if (supabaseError) {
-          throw supabaseError;
-        }
-
-        setTickets(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch tickets'));
-        console.error('Error fetching tickets:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     fetchTickets();
 
-    // Subscribe to realtime changes
+    // Subscribe to realtime updates
     const channel = supabase
       .channel('tickets_changes')
       .on(
@@ -67,17 +41,75 @@ export function useTickets() {
           schema: 'public',
           table: 'tickets'
         },
-        (payload: RealtimePostgresChangesPayload<Database['public']['Tables']['tickets']['Row']>) => {
-          console.log('Received realtime update:', payload);
-          fetchTickets(); // Refetch all tickets for now
+        () => {
+          fetchTickets();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ticket_tags'
+        },
+        () => {
+          fetchTickets();
         }
       )
       .subscribe();
 
     return () => {
-      channel.unsubscribe();
+      supabase.removeChannel(channel);
     };
-  }, [profile]);
+  }, []);
 
-  return { tickets, isLoading, error };
+  const fetchTickets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          customer:profiles!tickets_customer_id_fkey (
+            full_name,
+            email
+          ),
+          assigned_to:profiles!tickets_assigned_to_id_fkey (
+            full_name
+          ),
+          tags:ticket_tags (
+            tag:tags (
+              id,
+              name,
+              color,
+              usage_count,
+              last_used_at
+            )
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform the data to match the Ticket type
+      const transformedTickets = (data as TicketResponse[]).map(ticket => ({
+        ...ticket,
+        tags: ticket.tags?.map(t => t.tag) || []
+      })) as Ticket[];
+
+      setTickets(transformedTickets);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching tickets:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch tickets'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return {
+    tickets,
+    isLoading,
+    error,
+    refetch: fetchTickets,
+  };
 } 

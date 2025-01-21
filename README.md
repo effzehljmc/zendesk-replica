@@ -29,6 +29,8 @@ A modern, AI-powered helpdesk system built with React, TypeScript, Supabase, and
 - 👤 Agent assignment
 - 📈 Status and priority updates
 - 🔒 Role-based access (Admin/Agent only)
+- 📝 Ticket notes
+- 🏷️ Tag system
 
 ### Core Functionality
 - 📊 Dashboard with key metrics
@@ -126,6 +128,9 @@ The project uses Supabase as the database with the following main tables:
 4. `tickets` - Support tickets
 5. `kb_articles` - Knowledge base articles
 6. `settings` - System-wide configuration settings
+7. `ticket_notes` - Internal notes for tickets
+8. `tags` - Tag management
+9. `ticket_tags` - Many-to-many relationship for tickets and tags
 
 Migrations are handled by Drizzle ORM.
 

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
@@ -9,8 +9,6 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function main() {
   try {
