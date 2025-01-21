@@ -52,15 +52,15 @@ function App() {
             {/* Ticket Routes */}
             <Route
               path="/tickets"
-              element={<RoleProtectedRoute roles={['admin', 'agent']}><TicketsPage /></RoleProtectedRoute>}
+              element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><TicketsPage /></RoleProtectedRoute>}
             />
             <Route
               path="/tickets/create"
-              element={<RoleProtectedRoute roles={['admin', 'agent']}><CreateTicketPage /></RoleProtectedRoute>}
+              element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><CreateTicketPage /></RoleProtectedRoute>}
             />
             <Route
               path="/tickets/:id"
-              element={<RoleProtectedRoute roles={['admin', 'agent']}><TicketDetailPage /></RoleProtectedRoute>}
+              element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><TicketDetailPage /></RoleProtectedRoute>}
             />
           </Route>
         </Routes>
