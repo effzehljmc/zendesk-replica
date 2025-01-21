@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { Tag as TagComponent } from "./tag";
 import { useTags } from "@/hooks/useTags";
-import { Tag } from "@/types/ticket";
+import type { Tag } from "@/types/ticket";
 import {
   Dialog,
   DialogContent,
