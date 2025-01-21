@@ -15,7 +15,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { TagSelector } from "@/components/ui/tag-selector";
-import { useTags } from "@/hooks/useTags";
 import type { Tag } from "@/types/ticket";
 
 export default function CreateTicketPage() {
@@ -27,7 +26,6 @@ export default function CreateTicketPage() {
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { tags } = useTags();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
