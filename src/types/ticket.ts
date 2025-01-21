@@ -1,4 +1,4 @@
-export type TicketStatus = 'new' | 'open' | 'pending' | 'resolved';
+export type TicketStatus = 'new' | 'open' | 'pending' | 'resolved' | 'closed';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface Tag {

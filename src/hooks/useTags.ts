@@ -10,16 +10,6 @@ interface CreateTagData {
   color: string;
 }
 
-interface TagRow {
-  id: string;
-  name: string;
-  color: string;
-  usage_count: number;
-  last_used_at: string | null;
-  created_at: string;
-  created_by_id: string;
-}
-
 interface TagData {
   id: string;
   name: string;
