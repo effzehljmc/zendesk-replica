@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminStats } from "@/hooks/useAdminStats";
 import { TicketStatusChart } from "@/components/dashboard/TicketStatusChart";
 import { AgentPerformance } from "@/components/dashboard/AgentPerformance";
+import { SatisfactionTrend } from "@/components/analytics/SatisfactionTrend";
 import {
   LineChart,
   Line,
@@ -41,7 +42,8 @@ export function Analytics() {
         <div className="grid gap-4 md:grid-cols-2">
           <Skeleton className="h-[400px]" />
           <Skeleton className="h-[400px]" />
-          {isAdmin && <Skeleton className="h-[400px] md:col-span-2" />}
+          <Skeleton className="h-[400px]" />
+          {isAdmin && <Skeleton className="h-[400px]" />}
         </div>
       ) : (
         <div className="space-y-4">
@@ -80,6 +82,9 @@ export function Analytics() {
                 </ResponsiveContainer>
               </div>
             </Card>
+
+            {/* Customer Satisfaction Trend */}
+            <SatisfactionTrend />
           </div>
 
           {/* Agent Performance - Only visible to admins */}

@@ -14,6 +14,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { SatisfactionTrend } from "@/components/analytics/SatisfactionTrend";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -200,7 +201,7 @@ export function AdminDashboard() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               <TicketStatusChart stats={stats.ticketStats} />
-              {/* Add more analytics charts here */}
+              <SatisfactionTrend />
             </div>
           )}
         </TabsContent>
