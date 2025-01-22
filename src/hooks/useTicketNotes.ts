@@ -182,14 +182,28 @@ export function useTicketNotes(ticketId: string) {
       }
 
       console.log('Creating note:', { ticketId, data, profileId: profile.id });
-      const { data: newNote, error } = await supabase
+      
+      // Check if this is an agent/admin
+      const isAgentOrAdmin = profile.roles?.some(r => r.name === 'admin' || r.name === 'agent');
+      
+      // Create the note first
+      const { data: newNote, error: createError } = await supabase
+        .rpc('create_ticket_note', {
+          p_ticket_id: ticketId,
+          p_content: data.content,
+          p_created_by_id: profile.id,
+          p_is_agent_or_admin: isAgentOrAdmin,
+          p_visibility: data.visibility || 'private'
+        });
+
+      if (createError) {
+        console.error('Error creating note:', createError);
+        throw createError;
+      }
+
+      // Then fetch the complete note data with profile
+      const { data: noteData, error: fetchError } = await supabase
         .from('ticket_notes')
-        .insert({
-          ticket_id: ticketId,
-          content: data.content,
-          visibility: data.visibility || 'private',
-          created_by_id: profile.id,
-        })
         .select(`
           *,
           created_by:profiles!ticket_notes_created_by_id_fkey (
@@ -197,25 +211,26 @@ export function useTicketNotes(ticketId: string) {
             full_name
           )
         `)
+        .eq('id', newNote[0].id)
         .single();
 
-      if (error) {
-        console.error('Error creating note:', error);
-        throw error;
+      if (fetchError) {
+        console.error('Error fetching note data:', fetchError);
+        throw fetchError;
       }
 
-      console.log('Note created successfully:', newNote);
+      console.log('Note created successfully:', noteData);
 
       // Transform and add the new note immediately
       const transformedNote = {
-        id: newNote.id,
-        content: newNote.content,
-        visibility: newNote.visibility,
-        createdAt: newNote.created_at,
-        updatedAt: newNote.updated_at,
-        createdBy: newNote.created_by ? {
-          id: newNote.created_by.id,
-          fullName: newNote.created_by.full_name,
+        id: noteData.id,
+        content: noteData.content,
+        visibility: noteData.visibility,
+        createdAt: noteData.created_at,
+        updatedAt: noteData.updated_at,
+        createdBy: noteData.created_by ? {
+          id: noteData.created_by.id,
+          fullName: noteData.created_by.full_name,
         } : undefined,
       };
 
