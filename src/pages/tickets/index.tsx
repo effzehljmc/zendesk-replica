@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,15 @@ export default function TicketsPage() {
 
     return matchesSearch && matchesStatus && matchesPriority && matchesTag;
   });
+
+  useEffect(() => {
+    filteredTickets.forEach(ticket => {
+      console.log('Rendering tags for ticket:', ticket.id, ticket.tags);
+      ticket.tags?.forEach(tag => {
+        console.log('Rendering tag:', tag);
+      });
+    });
+  }, [filteredTickets]);
 
   if (isLoading) {
     return <div className="p-6"><Skeleton className="h-48 w-full" /></div>;

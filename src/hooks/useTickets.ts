@@ -99,7 +99,8 @@ export function useTickets() {
               name,
               color,
               usage_count,
-              last_used_at
+              last_used_at,
+              created_at
             )
           )
         `);
@@ -116,6 +117,7 @@ export function useTickets() {
       // Transform the data to match the Ticket type
       const transformedTickets = (data as TicketResponse[]).map(ticket => ({
         ...ticket,
+        ticket_number: parseInt(ticket.ticket_number, 10),
         tags: ticket.tags?.map(t => t.tag) || []
       })) as Ticket[];
 

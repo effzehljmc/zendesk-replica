@@ -14,7 +14,7 @@ export interface Tag {
 
 export interface Ticket {
   id: string;
-  ticket_number: string;
+  ticket_number: number;
   title: string;
   description: string;
   status: TicketStatus;
@@ -24,13 +24,17 @@ export interface Ticket {
   created_at: string;
   updated_at: string;
   customer?: {
-    full_name: string;
-    email: string;
+    id: string;
+    full_name: string | null;
+    email: string | null;
   };
   assigned_to?: {
-    full_name: string;
+    id: string;
+    full_name: string | null;
+    email: string | null;
   };
-  tags: Tag[];
+  tags?: Tag[];
+  satisfaction_rating?: number;
 }
 
 export interface CreateTicketData {
@@ -47,4 +51,5 @@ export interface UpdateTicketData {
   priority?: TicketPriority;
   assigned_to_id?: string | null;
   tags?: string[];
+  satisfaction_rating?: number;
 } 
