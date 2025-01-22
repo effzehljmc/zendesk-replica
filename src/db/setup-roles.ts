@@ -41,8 +41,8 @@ async function setupRoles() {
   // Assign admin role to user
   await db.insert(userRoles)
     .values({
-      user_id: user.id,
-      role_id: adminRole.id,
+      userId: user.id,
+      roleId: adminRole.id,
     })
     .onConflictDoNothing();
 
