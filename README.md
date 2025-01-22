@@ -31,6 +31,21 @@ A modern, AI-powered helpdesk system built with React, TypeScript, Supabase, and
 - 🔒 Role-based access (Admin/Agent only)
 - 📝 Ticket notes
 - 🏷️ Tag system
+- ⭐ Customer satisfaction ratings
+- ⏱️ Response time tracking
+
+### Analytics & Reporting
+- 📊 Customer Statistics
+  - Ticket status distribution
+  - Average response time
+  - Satisfaction ratings
+  - Recent ticket history
+  - Suggested knowledge base articles
+- 📈 Agent Performance Metrics
+  - Tickets handled
+  - Average response time
+  - Customer satisfaction scores
+  - Resolution rates
 
 ### Core Functionality
 - 📊 Dashboard with key metrics
@@ -205,25 +220,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Recent Updates
 
-### User Management Improvements
-- Added comprehensive user listing with search
-- Implemented user invitation system
-- Added role management with inline editing
-- Enhanced user detail view with activity information
-- Added ticket count tracking per user
-- Improved error handling and loading states
+### Customer Experience Improvements
+- Added customer satisfaction ratings for resolved tickets
+- Implemented response time tracking and analytics
+- Enhanced ticket status visibility
+- Added suggested knowledge base articles
+- Improved customer dashboard with comprehensive statistics
 
-### Admin Dashboard Improvements
-- Enhanced ticket statistics with real-time updates
-- Fixed user count calculations using proper role-based filtering
-- Added 30-day ticket activity visualization
-- Improved error handling and loading states
-
-### Settings Management
-- Added system-wide settings management
-- Implemented settings table for storing configuration
-- Created admin interface for managing settings
-- Added role-based access control for settings
+### Analytics Enhancements
+- Added detailed customer statistics tracking
+- Implemented agent performance metrics
+- Added team-wide performance analytics
+- Enhanced response time calculations
+- Added satisfaction rating system
 
 ### Technical Improvements
 - Fixed TypeScript type definitions across components
@@ -231,6 +240,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Enhanced database queries with proper joins and filtering
 - Added proper role-based filtering for user counts
 - Implemented proper error boundaries and loading states
+- Added real-time updates for ticket ratings
 
 ## Planned Features
 

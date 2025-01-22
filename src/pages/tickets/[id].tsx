@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { TagSelector } from '@/components/ui/tag-selector';
 import { TicketNotes } from '@/components/ticket/TicketNotes';
+import { TicketRating } from '@/components/ticket/TicketRating';
 import { Tag } from '@/types/ticket';
 
 export default function TicketDetailPage() {
@@ -215,6 +216,19 @@ export default function TicketDetailPage() {
             {ticket.description}
           </div>
         </div>
+
+        {ticket.status === 'resolved' && !isAdmin && !isAgent && (
+          <div className="space-y-2">
+            <TicketRating
+              ticketId={ticket.id}
+              currentRating={ticket.satisfaction_rating}
+              onRatingSubmit={(rating) => {
+                // Optimistically update the local ticket state
+                updateTicket({ satisfaction_rating: rating });
+              }}
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className="text-sm text-muted-foreground">Created</div>
