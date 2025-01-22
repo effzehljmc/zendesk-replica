@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminStats } from "@/hooks/useAdminStats";
+import { TicketStatusChart } from "@/components/dashboard/TicketStatusChart";
 import {
   LineChart,
   Line,
@@ -44,152 +45,169 @@ export function AdminDashboard() {
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/tickets?status=new")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                New Tickets
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.ticketStats.new}</div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/tickets?status=new")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  New Tickets
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.ticketStats.new}</div>
+                )}
+              </CardContent>
+            </Card>
 
-          <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/tickets?status=open")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Open Tickets
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.ticketStats.open}</div>
-              )}
-            </CardContent>
-          </Card>
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/tickets?status=open")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Open Tickets
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.ticketStats.open}</div>
+                )}
+              </CardContent>
+            </Card>
 
-          <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/tickets?status=in_progress")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                In Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.ticketStats.inProgress}</div>
-              )}
-            </CardContent>
-          </Card>
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/tickets?status=in_progress")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  In Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.ticketStats.inProgress}</div>
+                )}
+              </CardContent>
+            </Card>
 
-          <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/tickets?status=resolved")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Resolved Tickets
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.ticketStats.resolved}</div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/tickets?status=resolved")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Resolved Tickets
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.ticketStats.resolved}</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* System Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/admin/users")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Users
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.userCount}</div>
-              )}
-            </CardContent>
-          </Card>
+          {/* System Stats */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/admin/users")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Users
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.userCount}</div>
+                )}
+              </CardContent>
+            </Card>
 
-          <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/admin/users?role=agent")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Active Agents
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.agentCount}</div>
-              )}
-            </CardContent>
-          </Card>
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/admin/users?role=agent")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Active Agents
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.agentCount}</div>
+                )}
+              </CardContent>
+            </Card>
 
-          <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/knowledge-base")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                KB Articles
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                <div className="text-2xl font-bold">{stats?.kbArticleCount}</div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => navigate("/knowledge-base")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  KB Articles
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats?.kbArticleCount}</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Ticket Activity Chart */}
-        <Card className="p-6">
-          <h3 className="font-semibold mb-4">Ticket Activity (Last 30 Days)</h3>
-          {loading ? (
-            <Skeleton className="h-[300px] w-full" />
+          {/* Ticket Activity Chart */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Ticket Activity (Last 30 Days)</h3>
+            {loading ? (
+              <Skeleton className="h-[300px] w-full" />
+            ) : (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={stats?.recentTickets}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(date: string) => new Date(date).toLocaleDateString()}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      labelFormatter={(date: string) => new Date(date).toLocaleDateString()}
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="opened" 
+                      stroke="#2563eb" 
+                      name="Tickets Opened"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="closed" 
+                      stroke="#16a34a" 
+                      name="Tickets Closed"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          {loading || !stats?.ticketStats ? (
+            <Skeleton className="h-[400px] w-full" />
           ) : (
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats?.recentTickets}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickFormatter={(date: string) => new Date(date).toLocaleDateString()}
-                  />
-                  <YAxis />
-                  <Tooltip 
-                    labelFormatter={(date: string) => new Date(date).toLocaleDateString()}
-                  />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="opened" 
-                    stroke="#2563eb" 
-                    name="Tickets Opened"
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="closed" 
-                    stroke="#16a34a" 
-                    name="Tickets Closed"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="grid gap-4 md:grid-cols-2">
+              <TicketStatusChart stats={stats.ticketStats} />
+              {/* Add more analytics charts here */}
             </div>
           )}
-        </Card>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-4">
+          {/* Reports content */}
+        </TabsContent>
       </Tabs>
     </div>
   );

@@ -35,6 +35,11 @@ A modern, AI-powered helpdesk system built with React, TypeScript, Supabase, and
 - ⏱️ Response time tracking
 
 ### Analytics & Reporting
+- 📊 Dedicated Analytics Dashboard
+  - Ticket volume by status (pie chart)
+  - Ticket activity trends (30-day line chart)
+  - Real-time data updates
+  - Role-based access (Admin/Agent only)
 - 📊 Customer Statistics
   - Ticket status distribution
   - Average response time
@@ -220,6 +225,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Recent Updates
 
+### Analytics Dashboard Enhancement
+- Added dedicated analytics page for agents and admins
+- Implemented interactive pie chart for ticket status distribution
+- Added 30-day ticket activity trend visualization
+- Enhanced data visualization with real-time updates
+- Improved loading states and error handling for analytics
+- Added role-based access control for analytics features
+- Added first response time tracking for better agent performance metrics
+
 ### Customer Experience Improvements
 - Added customer satisfaction ratings for resolved tickets
 - Implemented response time tracking and analytics
@@ -229,18 +243,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Analytics Enhancements
 - Added detailed customer statistics tracking
-- Implemented agent performance metrics
+- Implemented agent performance metrics including first response time
 - Added team-wide performance analytics
-- Enhanced response time calculations
+- Enhanced response time calculations with automatic tracking
 - Added satisfaction rating system
+- Improved agent performance tracking with first response metrics
 
 ### Technical Improvements
-- Fixed TypeScript type definitions across components
-- Improved error handling in admin statistics
-- Enhanced database queries with proper joins and filtering
-- Added proper role-based filtering for user counts
-- Implemented proper error boundaries and loading states
-- Added real-time updates for ticket ratings
+- Added stored procedures for complex business logic
+- Enhanced database schema with response time tracking
+- Improved real-time updates for analytics data
+- Added robust error handling for data operations
+- Implemented schema-first development approach
 
 ## Planned Features
 

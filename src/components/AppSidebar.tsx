@@ -8,18 +8,30 @@ import {
   Users,
   BarChart
 } from 'lucide-react';
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Tickets', href: '/tickets', icon: Ticket },
-  { name: 'Knowledge Base', href: '/knowledge-base', icon: BookOpen },
-  { name: 'Analytics', href: '/analytics', icon: BarChart },
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
-];
+import { useAuth } from '@/contexts/AuthContext';
 
 export function AppSidebar() {
   const location = useLocation();
+  const { profile } = useAuth();
+
+  // Check if user is an agent or admin
+  const canAccessAnalytics = profile?.roles.some(role => 
+    role.name === 'admin' || role.name === 'agent'
+  );
+
+  // Check if user is an admin
+  const isAdmin = profile?.roles.some(role => role.name === 'admin');
+
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Tickets', href: '/tickets', icon: Ticket },
+    { name: 'Knowledge Base', href: '/knowledge-base', icon: BookOpen },
+    ...(canAccessAnalytics ? [{ name: 'Analytics', href: '/analytics', icon: BarChart }] : []),
+    ...(isAdmin ? [
+      { name: 'Users', href: '/admin/users', icon: Users },
+      { name: 'Settings', href: '/admin/settings', icon: Settings }
+    ] : [])
+  ];
 
   return (
     <div className="w-64 border-r bg-muted min-h-[calc(100vh-4rem)]">

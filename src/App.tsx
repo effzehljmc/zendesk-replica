@@ -6,6 +6,7 @@ import { Login } from './pages/Login';
 import { SignUp } from './pages/SignUp';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
+import { Analytics } from './pages/Analytics';
 import { AdminLayout } from './components/AdminLayout';
 import { AdminDashboard } from './pages/admin/Dashboard';
 import { AdminSettings } from './pages/admin/Settings';
@@ -38,6 +39,12 @@ function App() {
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            
+            {/* Analytics Route - Only for agents and admins */}
+            <Route
+              path="/analytics"
+              element={<RoleProtectedRoute roles={['admin', 'agent']}><Analytics /></RoleProtectedRoute>}
+            />
             
             {/* Admin Only Routes */}
             <Route path="/admin" element={<RoleProtectedRoute roles={['admin']}><AdminLayout /></RoleProtectedRoute>}>
