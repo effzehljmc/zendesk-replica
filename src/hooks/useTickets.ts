@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Ticket, Tag } from '@/types/ticket';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface TicketResponse {
   id: string;
@@ -27,9 +29,14 @@ export function useTickets() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { profile } = useAuth();
+  const { isCustomer, loading: roleLoading } = useUserRole();
 
   useEffect(() => {
-    fetchTickets();
+    // Only fetch tickets when we have both profile and role information
+    if (!roleLoading) {
+      fetchTickets();
+    }
 
     // Subscribe to realtime updates
     const channel = supabase
@@ -42,7 +49,9 @@ export function useTickets() {
           table: 'tickets'
         },
         () => {
-          fetchTickets();
+          if (!roleLoading) {
+            fetchTickets();
+          }
         }
       )
       .on(
@@ -53,7 +62,9 @@ export function useTickets() {
           table: 'ticket_tags'
         },
         () => {
-          fetchTickets();
+          if (!roleLoading) {
+            fetchTickets();
+          }
         }
       )
       .subscribe();
@@ -61,11 +72,17 @@ export function useTickets() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [profile?.id, roleLoading]);
 
   const fetchTickets = async () => {
     try {
-      const { data, error } = await supabase
+      // Don't fetch if we don't have the profile yet
+      if (!profile?.id) {
+        setTickets([]);
+        return;
+      }
+
+      let query = supabase
         .from('tickets')
         .select(`
           *,
@@ -85,8 +102,14 @@ export function useTickets() {
               last_used_at
             )
           )
-        `)
-        .order('created_at', { ascending: false });
+        `);
+
+      // If user is a customer, only show their tickets
+      if (isCustomer && profile.id) {
+        query = query.eq('customer_id', profile.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -108,7 +131,7 @@ export function useTickets() {
 
   return {
     tickets,
-    isLoading,
+    isLoading: isLoading || roleLoading,
     error,
     refetch: fetchTickets,
   };
