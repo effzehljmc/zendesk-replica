@@ -1,29 +1,21 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useKBArticles } from '@/hooks/useKBArticles';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Search } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { KBArticle } from '@/lib/kb';
+import type { KBArticle } from '@/lib/kb';
 
-function KnowledgeBase() {
+export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState('');
-  const { articles, isLoadingArticles, search } = useKBArticles();
-  const [searchResults, setSearchResults] = useState<KBArticle[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const { usePublicArticles, searchKBArticles } = useKBArticles();
+  const { data: publicArticles, isLoading } = usePublicArticles();
+  const [searchResults, setSearchResults] = useState<KBArticle[]>([]);
 
-  // Filter public articles and sort by date
-  const publicArticles = articles?.filter(article => article.is_public)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-  // Get content excerpt (first 150 characters)
-  const getExcerpt = (content: string) => {
-    const cleaned = content.replace(/\n/g, ' ').trim();
-    return cleaned.length > 150 ? `${cleaned.substring(0, 150)}...` : cleaned;
-  };
-
-  const handleSearch = async () => {
+  // Handle search
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
@@ -31,77 +23,84 @@ function KnowledgeBase() {
 
     setIsSearching(true);
     try {
-      const results = await search({ query: searchQuery });
-      setSearchResults(results?.filter(article => article.is_public) ?? []);
+      const results = await searchKBArticles(searchQuery);
+      setSearchResults(results);
     } catch (error) {
-      console.error('Search failed:', error);
+      console.error('Search error:', error);
       setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
   };
 
-  const displayedArticles = searchResults.length > 0 ? searchResults : publicArticles ?? [];
+  // Display articles based on search state
+  const displayedArticles = searchQuery ? searchResults : publicArticles || [];
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <div className="h-10 w-full max-w-md bg-muted animate-pulse rounded-md" />
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-6 w-3/4 bg-muted animate-pulse rounded" />
+              <div className="h-4 w-full bg-muted animate-pulse rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8">Knowledge Base</h1>
-
-      {/* Search Section */}
-      <div className="mb-8 flex gap-2">
-        <Input
-          type="text"
-          placeholder="Search articles..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          className="max-w-md"
-        />
-        <Button 
-          onClick={handleSearch}
-          disabled={isSearching}
-        >
-          <Search className="h-4 w-4 mr-2" />
-          Search
-        </Button>
-      </div>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Knowledge Base</h1>
+      
+      {/* Search Form */}
+      <form onSubmit={handleSearch} className="mb-8">
+        <div className="flex gap-2 max-w-md">
+          <Input
+            type="search"
+            placeholder="Search articles..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1"
+          />
+          <Button type="submit" disabled={isSearching}>
+            <Search className="h-4 w-4" />
+          </Button>
+        </div>
+      </form>
 
       {/* Articles List */}
       <div className="space-y-6">
-        {isLoadingArticles ? (
-          // Loading skeletons
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="space-y-3">
-              <Skeleton className="h-6 w-[250px]" />
-              <Skeleton className="h-4 w-full" />
-            </div>
-          ))
-        ) : displayedArticles?.length ? (
-          displayedArticles.map((article) => (
-            <article 
+        {isSearching ? (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-24 bg-muted animate-pulse rounded" />
+            ))}
+          </div>
+        ) : displayedArticles.length > 0 ? (
+          displayedArticles.map((article: KBArticle) => (
+            <Link
               key={article.id}
-              className="border rounded-lg p-6 hover:border-primary transition-colors"
+              to={`/kb/${article.id}`}
+              className="block p-4 border rounded-lg hover:bg-muted transition-colors"
             >
-              <Link to={`/kb/${article.id}`}>
-                <h2 className="text-xl font-semibold mb-2 hover:text-primary">
-                  {article.title}
-                </h2>
-                <p className="text-muted-foreground">
-                  {getExcerpt(article.content)}
-                </p>
-              </Link>
-            </article>
+              <h2 className="text-xl font-semibold mb-2">{article.title}</h2>
+              <p className="text-muted-foreground line-clamp-2">
+                {article.content}
+              </p>
+            </Link>
           ))
         ) : (
           <p className="text-muted-foreground">
-            {searchQuery 
-              ? "No articles found matching your search." 
-              : "No articles available."}
+            {searchQuery
+              ? 'No articles found matching your search.'
+              : 'No articles available.'}
           </p>
         )}
       </div>
     </div>
   );
-}
-
-export default KnowledgeBase; 
+} 
