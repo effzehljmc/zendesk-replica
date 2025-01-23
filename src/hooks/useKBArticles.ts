@@ -8,7 +8,8 @@ import {
   createKBArticle, 
   updateKBArticle, 
   deleteKBArticle, 
-  searchKBArticles 
+  searchKBArticles,
+  getSimilarArticles as getSimilarKBArticles
 } from '@/lib/kb';
 import { PostgrestError } from '@supabase/supabase-js';
 
@@ -102,6 +103,16 @@ export function useKBArticles() {
     }
   });
 
+  // Get similar articles
+  const getSimilarArticles = async (articleId: string, limit: number = 3) => {
+    try {
+      return await getSimilarKBArticles(articleId, limit);
+    } catch (err) {
+      setError(err as PostgrestError);
+      throw err;
+    }
+  };
+
   return {
     articles,
     isLoadingArticles,
@@ -111,6 +122,7 @@ export function useKBArticles() {
     update,
     remove,
     search,
+    getSimilarArticles,
     clearError: () => setError(null)
   };
 } 

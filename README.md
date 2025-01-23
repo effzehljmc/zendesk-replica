@@ -299,3 +299,36 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ Confirmation dialogs
 - 🔍 Global search
 - 📋 Saved views
+
+## Knowledge Base
+
+The Knowledge Base (KB) section provides a public-facing documentation system with the following features:
+
+### Features
+- Public access to knowledge base articles (no login required)
+- Vector similarity search using pgvector
+- Related articles suggestions based on content similarity
+- Article management interface for admins
+- Real-time article updates with embeddings
+
+### Technical Details
+- Uses OpenAI embeddings for semantic search
+- PostgreSQL vector similarity search with pgvector extension
+- Cosine similarity for finding related articles
+- Caching with React Query (5-minute stale time)
+- Responsive loading states with skeleton UI
+
+### Environment Variables
+```bash
+VITE_OPENAI_API_KEY=your_openai_api_key  # Required for embeddings
+```
+
+### Database Setup
+The KB uses the following PostgreSQL extensions and features:
+- pgvector extension for vector operations
+- Vector similarity search index
+- Automatic embedding updates on article changes
+
+### API Functions
+- `get_similar_articles`: Finds similar articles using vector similarity
+- `match_kb_articles`: Performs semantic search across articles

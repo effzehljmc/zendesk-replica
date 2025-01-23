@@ -1,18 +1,22 @@
 import { supabase } from './supabase';
-import { generateEmbedding } from './openai';
+import { getEmbedding } from './openai';
 
 export type KBArticle = {
   id: string;
   title: string;
   content: string;
   is_public: boolean;
-  author_id: string;
-  embedding?: number[];
   created_at: string;
   updated_at: string;
+  embedding?: number[];
 };
 
-export type CreateKBArticleInput = Pick<KBArticle, 'title' | 'content' | 'is_public'>;
+export type CreateKBArticleInput = {
+  title: string;
+  content: string;
+  is_public: boolean;
+};
+
 export type UpdateKBArticleInput = Partial<CreateKBArticleInput>;
 
 // Get all articles (respects RLS policies)
@@ -38,10 +42,52 @@ export async function getKBArticle(id: string) {
   return data as KBArticle;
 }
 
+export async function getSimilarArticles(articleId: string, limit: number = 3) {
+  try {
+    console.log('Calling getSimilarArticles with:', { articleId, limit });
+    
+    // Ensure articleId is a valid UUID
+    if (!articleId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      throw new Error('Invalid article ID format');
+    }
+
+    const params = {
+      _article_id: articleId
+    };
+    console.log('RPC parameters:', params);
+
+    const response = await supabase.rpc('get_similar_articles', params);
+    console.log('Raw Supabase response:', response);
+
+    if (response.error) {
+      console.error('Error getting similar articles:', {
+        message: response.error.message,
+        details: response.error.details,
+        hint: response.error.hint,
+        code: response.error.code,
+        status: response.status,
+        statusText: response.statusText
+      });
+      throw response.error;
+    }
+
+    if (!response.data) {
+      console.log('No similar articles found');
+      return [];
+    }
+
+    console.log('Similar articles found:', response.data);
+    return response.data as (KBArticle & { similarity: number })[];
+  } catch (error) {
+    console.error('Error in getSimilarArticles:', error);
+    return []; // Return empty array instead of throwing
+  }
+}
+
 // Create a new article with embedding
 export async function createKBArticle(input: CreateKBArticleInput) {
-  // Generate embedding from title and content
-  const embedding = await generateEmbedding(`${input.title}\n\n${input.content}`);
+  // Get embedding for the article content
+  const embedding = await getEmbedding(input.content);
 
   const { data, error } = await supabase
     .from('kb_articles')
@@ -57,14 +103,9 @@ export async function createKBArticle(input: CreateKBArticleInput) {
 export async function updateKBArticle(id: string, input: UpdateKBArticleInput) {
   const updates: any = { ...input };
   
-  // Only regenerate embedding if title or content changed
-  if (input.title || input.content) {
-    // Get current article to combine with updates
-    const current = await getKBArticle(id);
-    const newTitle = input.title || current.title;
-    const newContent = input.content || current.content;
-    
-    updates.embedding = await generateEmbedding(`${newTitle}\n\n${newContent}`);
+  // If content is being updated, get new embedding
+  if (input.content) {
+    updates.embedding = await getEmbedding(input.content);
   }
 
   const { data, error } = await supabase
@@ -89,16 +130,15 @@ export async function deleteKBArticle(id: string) {
 }
 
 // Search articles by similarity
-export async function searchKBArticles(query: string, limit: number = 5) {
-  // Generate embedding for the search query
-  const embedding = await generateEmbedding(query);
+export async function searchKBArticles(query: string, limit?: number) {
+  // Get embedding for the search query
+  const embedding = await getEmbedding(query);
 
-  // Search using vector similarity
   const { data, error } = await supabase
     .rpc('match_kb_articles', {
       query_embedding: embedding,
-      match_threshold: 0.5, // Adjust this threshold as needed
-      match_count: limit
+      match_threshold: 0.7,
+      match_count: limit || 10
     });
 
   if (error) throw error;
