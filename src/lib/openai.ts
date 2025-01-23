@@ -5,12 +5,17 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true // Note: In production, you should use Edge Functions
 });
 
-export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: text,
-    encoding_format: "float",
-  });
+export async function getEmbedding(text: string): Promise<number[]> {
+  try {
+    const response = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: text,
+      encoding_format: "float",
+    });
 
-  return response.data[0].embedding;
+    return response.data[0].embedding;
+  } catch (error) {
+    console.error('Error generating embedding:', error);
+    throw error;
+  }
 } 
