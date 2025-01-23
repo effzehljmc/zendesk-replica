@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { TagSelector } from '@/components/ui/tag-selector';
 import { TicketNotes } from '@/components/ticket/TicketNotes';
 import { TicketRating } from '@/components/ticket/TicketRating';
+import { TicketMessages } from '@/components/ticket/TicketMessages';
 import { Tag } from '@/types/ticket';
 
 export default function TicketDetailPage() {
@@ -235,6 +236,9 @@ export default function TicketDetailPage() {
           <div>{new Date(ticket.created_at).toLocaleString()}</div>
         </div>
 
+        <div className="border-t pt-6">
+          <TicketMessages ticketId={ticket.id} />
+        </div>
         <div className="border-t pt-6">
           <TicketNotes ticketId={ticket.id} />
         </div>
