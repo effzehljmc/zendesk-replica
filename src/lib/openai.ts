@@ -1,10 +1,3 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true // Note: In production, you should use Edge Functions
-});
-
 export async function getEmbedding(text: string): Promise<number[]> {
   console.log('Getting embedding for text:', {
     length: text.length,
