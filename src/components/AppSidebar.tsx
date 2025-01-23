@@ -3,10 +3,10 @@ import { cn } from '../lib/utils';
 import {
   LayoutDashboard,
   Ticket,
-  BookOpen,
+  Book,
   Settings,
   Users,
-  BarChart
+  BarChart2
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -25,8 +25,8 @@ export function AppSidebar() {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Tickets', href: '/tickets', icon: Ticket },
-    { name: 'Knowledge Base', href: '/knowledge-base', icon: BookOpen },
-    ...(canAccessAnalytics ? [{ name: 'Analytics', href: '/analytics', icon: BarChart }] : []),
+    { name: 'Knowledge Base', href: '/kb', icon: Book, public: true },
+    ...(canAccessAnalytics ? [{ name: 'Analytics', href: '/analytics', icon: BarChart2 }] : []),
     ...(isAdmin ? [
       { name: 'Users', href: '/admin/users', icon: Users },
       { name: 'Settings', href: '/admin/settings', icon: Settings }
