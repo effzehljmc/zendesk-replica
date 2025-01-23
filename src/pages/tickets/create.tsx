@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { TagSelector } from "@/components/ui/tag-selector";
 import type { Tag } from "@/types/ticket";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function CreateTicketPage() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function CreateTicketPage() {
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const { profile } = useAuth();
   const { toast } = useToast();
+  const { isCustomer } = useUserRole();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +48,7 @@ export default function CreateTicketPage() {
         .insert({
           title,
           description,
-          priority,
+          priority: isCustomer ? "medium" : priority, // Default to medium for customers
           status: "new",
           customer_id: profile.id,
         })
@@ -55,8 +57,8 @@ export default function CreateTicketPage() {
 
       if (ticketError) throw ticketError;
 
-      // Then create the ticket-tag relationships if tags are provided
-      if (selectedTags.length > 0) {
+      // Then create the ticket-tag relationships if tags are provided and user is not a customer
+      if (!isCustomer && selectedTags.length > 0) {
         const { error: tagError } = await supabase
           .from("ticket_tags")
           .insert(
@@ -135,31 +137,35 @@ export default function CreateTicketPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="priority" className="text-sm font-medium">
-              Priority
-            </label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!isCustomer && (
+            <>
+              <div className="space-y-2">
+                <label htmlFor="priority" className="text-sm font-medium">
+                  Priority
+                </label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tags</label>
-            <TagSelector
-              selectedTags={selectedTags}
-              onTagsChange={setSelectedTags}
-              maxTags={3}
-            />
-          </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tags</label>
+                <TagSelector
+                  selectedTags={selectedTags}
+                  onTagsChange={setSelectedTags}
+                  maxTags={3}
+                />
+              </div>
+            </>
+          )}
 
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Creating..." : "Create Ticket"}

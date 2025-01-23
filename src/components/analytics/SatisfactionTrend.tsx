@@ -1,29 +1,20 @@
 "use client"
 
-import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid } from "recharts"
+import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
+import { ChartTooltip } from "@/components/ui/chart"
 import { useAdminStats } from "@/hooks/useAdminStats"
 
 export function SatisfactionTrend() {
   const { stats } = useAdminStats();
 
-  // Process satisfaction data by day
-  const satisfactionByDay = stats?.recentTickets.map(day => {
-    const date = day.date;
-    const dayTickets = stats.agentStats.flatMap(agent => 
-      agent.satisfaction > 0 ? [{ date, rating: agent.satisfaction }] : []
-    );
-    
-    const avgRating = dayTickets.length > 0
-      ? dayTickets.reduce((sum, t) => sum + t.rating, 0) / dayTickets.length
-      : null;
+  // Use the satisfaction data directly from recentTickets
+  const satisfactionByDay = stats?.recentTickets.map(day => ({
+    date: day.date,
+    rating: day.satisfaction
+  })) || [];
 
-    return {
-      date,
-      rating: avgRating
-    };
-  }) || [];
+  console.log('Satisfaction Data:', satisfactionByDay);
 
   return (
     <Card>
@@ -31,38 +22,44 @@ export function SatisfactionTrend() {
         <CardTitle>Customer Satisfaction Trend</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer
-          config={{
-            rating: {
-              label: "Rating",
-              color: "hsl(var(--success))",
-            },
-          }}
-          className="h-[300px]"
-        >
+        <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={satisfactionByDay}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
-                tickFormatter={(date: string) => new Date(date).toLocaleDateString()}
+                type="category"
+                tickFormatter={(date: string) => {
+                  const localDate = new Date(date + 'T00:00:00');
+                  return localDate.toLocaleDateString();
+                }}
+                interval={0}
               />
               <YAxis 
-                domain={[1, 5]} 
-                ticks={[1, 2, 3, 4, 5]}
+                domain={[0, 5]} 
+                ticks={[0, 1, 2, 3, 4, 5]}
+                allowDataOverflow={false}
               />
+              <Legend />
               <Line 
                 type="monotone" 
                 dataKey="rating" 
-                stroke="hsl(var(--success))" 
+                name="Rating"
+                stroke="#16a34a"
                 strokeWidth={2}
-                dot={{ fill: "hsl(var(--success))" }}
+                dot={{ strokeWidth: 2, r: 4, fill: "#16a34a" }}
+                activeDot={{ r: 6 }}
                 connectNulls
               />
-              <ChartTooltip />
+              <ChartTooltip 
+                labelFormatter={(date: string) => {
+                  const localDate = new Date(date + 'T00:00:00');
+                  return localDate.toLocaleDateString();
+                }}
+              />
             </LineChart>
           </ResponsiveContainer>
-        </ChartContainer>
+        </div>
       </CardContent>
     </Card>
   )

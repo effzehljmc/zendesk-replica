@@ -101,22 +101,67 @@ export async function createKBArticle(input: CreateKBArticleInput) {
 
 // Update an article
 export async function updateKBArticle(id: string, input: UpdateKBArticleInput) {
-  const updates: any = { ...input };
-  
-  // If content is being updated, get new embedding
-  if (input.content) {
-    updates.embedding = await getEmbedding(input.content);
+  try {
+    const updates: any = { ...input };
+    
+    // If content is being updated, get new embedding
+    if (input.content) {
+      console.log('Getting embedding for text:', input.content);
+      const embedding = await getEmbedding(input.content);
+      if (!embedding) {
+        throw new Error('Failed to generate embedding');
+      }
+      updates.embedding = embedding;
+    }
+
+    // First verify the article exists
+    const { data: existing, error: fetchError } = await supabase
+      .from('kb_articles')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching article:', fetchError);
+      throw fetchError;
+    }
+
+    if (!existing) {
+      throw new Error('Article not found');
+    }
+
+    // Perform the update without selecting
+    const { error: updateError } = await supabase
+      .from('kb_articles')
+      .update(updates)
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Update error:', updateError);
+      throw updateError;
+    }
+
+    // Fetch the updated article in a separate query
+    const { data: updatedArticle, error: fetchUpdatedError } = await supabase
+      .from('kb_articles')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchUpdatedError) {
+      console.error('Error fetching updated article:', fetchUpdatedError);
+      throw fetchUpdatedError;
+    }
+
+    if (!updatedArticle) {
+      throw new Error('Failed to fetch updated article');
+    }
+
+    return updatedArticle as KBArticle;
+  } catch (error) {
+    console.error('Error in updateKBArticle:', error);
+    throw error;
   }
-
-  const { data, error } = await supabase
-    .from('kb_articles')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as KBArticle;
 }
 
 // Delete an article

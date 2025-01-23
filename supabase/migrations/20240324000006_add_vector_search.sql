@@ -35,8 +35,8 @@ create index if not exists kb_articles_embedding_idx
 
 -- Function to find similar articles
 create or replace function get_similar_articles(
-  article_id uuid,
-  match_count int default 3
+  _article_id uuid,
+  _match_count int DEFAULT 3
 )
 returns table (
   id uuid,
@@ -54,12 +54,22 @@ begin
     ka.title,
     ka.content,
     ka.is_public,
-    1 - (ka.embedding <=> (select embedding from kb_articles where id = article_id)) as similarity
+    1 - (
+      ka.embedding <=> (
+        SELECT kb.embedding
+        FROM kb_articles kb
+        WHERE kb.id = _article_id
+      )
+    ) as similarity
   from kb_articles ka
   where 
-    ka.id != article_id
+    ka.id != _article_id
     and ka.is_public = true
-  order by ka.embedding <=> (select embedding from kb_articles where id = article_id)
-  limit match_count;
+  order by ka.embedding <=> (
+    SELECT kb2.embedding
+    FROM kb_articles kb2
+    WHERE kb2.id = _article_id
+  )
+  limit _match_count;
 end;
 $$; 
