@@ -9,7 +9,8 @@ import {
   updateKBArticle, 
   deleteKBArticle, 
   searchKBArticles,
-  getSimilarArticles as getSimilarKBArticles
+  getSimilarArticles as getSimilarKBArticles,
+  searchKBArticles as searchKB
 } from '@/lib/kb';
 import { PostgrestError } from '@supabase/supabase-js';
 
@@ -113,6 +114,18 @@ export function useKBArticles() {
     }
   };
 
+  // Get all public articles
+  const usePublicArticles = () => {
+    return useQuery({
+      queryKey: ['kb-articles', 'public'],
+      queryFn: async () => {
+        const articles = await getKBArticles();
+        return articles.filter(article => article.is_public)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      }
+    });
+  };
+
   return {
     articles,
     isLoadingArticles,
@@ -123,6 +136,8 @@ export function useKBArticles() {
     remove,
     search,
     getSimilarArticles,
-    clearError: () => setError(null)
+    clearError: () => setError(null),
+    usePublicArticles,
+    searchKBArticles: searchKB
   };
 } 

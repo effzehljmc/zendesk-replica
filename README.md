@@ -332,3 +332,31 @@ The KB uses the following PostgreSQL extensions and features:
 ### API Functions
 - `get_similar_articles`: Finds similar articles using vector similarity
 - `match_kb_articles`: Performs semantic search across articles
+
+### Vector Search Implementation
+The Knowledge Base uses vector similarity search with the following features:
+
+#### Search Functions
+- `match_kb_articles`: Performs semantic search using query embeddings
+  - Parameters:
+    - `query_embedding`: vector(1536)
+    - `match_threshold`: float (default: 0.1)
+    - `match_count`: int (default: 5)
+  - Returns articles ordered by similarity
+
+#### Similarity Scoring
+- Uses cosine similarity with pgvector
+- Scores range from 0.0 to 1.0 (higher is better)
+- Current threshold set to 0.1 to capture semantic relationships
+- Results ordered by similarity score
+
+#### Technical Implementation
+- OpenAI text-embedding-3-small model for embeddings
+- PostgreSQL pgvector extension for vector operations
+- IVFFlat index for efficient similarity search
+- Automatic embedding generation on article creation/update
+
+#### Performance Optimization
+- Vector index using `ivfflat` with `vector_cosine_ops`
+- Caching of search results with React Query
+- Automatic index usage for similarity queries

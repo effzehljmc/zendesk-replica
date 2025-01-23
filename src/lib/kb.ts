@@ -131,16 +131,29 @@ export async function deleteKBArticle(id: string) {
 
 // Search articles by similarity
 export async function searchKBArticles(query: string, limit?: number) {
-  // Get embedding for the search query
-  const embedding = await getEmbedding(query);
+  try {
+    console.log('Generating embedding for query:', query);
+    // Get embedding for the search query
+    const embedding = await getEmbedding(query);
+    console.log('Generated embedding, calling match_kb_articles');
 
-  const { data, error } = await supabase
-    .rpc('match_kb_articles', {
-      query_embedding: embedding,
-      match_threshold: 0.7,
-      match_count: limit || 10
-    });
+    const { data, error } = await supabase
+      .rpc('match_kb_articles', {
+        query_embedding: embedding,
+        match_threshold: 0.2,  // Lowered significantly to see if we get any matches
+        match_count: limit || 5
+      });
 
-  if (error) throw error;
-  return data as KBArticle[];
+    console.log('Search response:', { data, error });
+
+    if (error) {
+      console.error('Search error:', error);
+      throw error;
+    }
+
+    return data as KBArticle[];
+  } catch (error) {
+    console.error('Error in searchKBArticles:', error);
+    throw error;
+  }
 } 
