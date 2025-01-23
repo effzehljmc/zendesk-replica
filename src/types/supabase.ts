@@ -119,12 +119,58 @@ export type Database = {
           updated_at?: string
         }
       }
+      kb_articles: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          is_public: boolean
+          author_id: string
+          embedding: number[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          content: string
+          is_public?: boolean
+          author_id?: string
+          embedding?: number[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          content?: string
+          is_public?: boolean
+          author_id?: string
+          embedding?: number[] | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_kb_articles: {
+        Args: {
+          query_embedding: number[]
+          match_threshold: number
+          match_count: number
+        }
+        Returns: {
+          id: string
+          title: string
+          content: string
+          is_public: boolean
+          author_id: string
+          similarity: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
