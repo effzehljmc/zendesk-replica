@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { ControllerRenderProps } from "react-hook-form";
 import { CreateTicketData } from "@/types/ticket";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const ticketFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -36,6 +37,7 @@ interface CreateTicketFormProps {
 }
 
 export function CreateTicketForm({ onSubmit, isLoading = false }: CreateTicketFormProps) {
+  const { isCustomer } = useUserRole();
   const form = useForm<TicketFormValues>({
     resolver: zodResolver(ticketFormSchema),
     defaultValues: {
@@ -89,29 +91,31 @@ export function CreateTicketForm({ onSubmit, isLoading = false }: CreateTicketFo
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="priority"
-          render={({ field }: { field: ControllerRenderProps<TicketFormValues, "priority"> }) => (
-            <FormItem>
-              <FormLabel>Priority</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {!isCustomer && (
+          <FormField
+            control={form.control}
+            name="priority"
+            render={({ field }: { field: ControllerRenderProps<TicketFormValues, "priority"> }) => (
+              <FormItem>
+                <FormLabel>Priority</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <Button type="submit" disabled={isLoading}>
           {isLoading ? "Creating..." : "Create Ticket"}

@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -143,6 +144,11 @@ function KnowledgeBaseAdmin() {
               <DialogTitle>
                 {editingArticle ? 'Edit Article' : 'Create New Article'}
               </DialogTitle>
+              <DialogDescription>
+                {editingArticle 
+                  ? 'Edit the article details below. Changes will be saved when you click Update.'
+                  : 'Fill in the article details below. The article will be created when you click Create.'}
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

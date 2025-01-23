@@ -101,10 +101,9 @@ export function useTicketNotes(ticketId: string) {
                     const updatedNotes = [...currentNotes];
                     updatedNotes[index] = transformedNote;
                     return updatedNotes;
-                  } else {
-                    // Add new note at the beginning (since we sort by created_at DESC)
-                    return [transformedNote, ...currentNotes];
                   }
+                  // For new notes, don't add them here as they're already added optimistically
+                  return currentNotes;
                 });
               } else {
                 console.error('Error fetching note data:', noteError);
@@ -235,7 +234,14 @@ export function useTicketNotes(ticketId: string) {
       };
 
       // Update the state immediately
-      setNotes(currentNotes => [transformedNote, ...currentNotes]);
+      setNotes(currentNotes => {
+        // Check if the note already exists
+        const exists = currentNotes.some(note => note.id === transformedNote.id);
+        if (exists) {
+          return currentNotes;
+        }
+        return [transformedNote, ...currentNotes];
+      });
 
       toast({
         title: 'Success',

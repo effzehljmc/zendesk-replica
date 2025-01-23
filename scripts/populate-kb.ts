@@ -141,6 +141,77 @@ Resolve common technical issues:
 - Contact support if persistent
     `,
     is_public: true
+  },
+  {
+    title: "Using Advanced Search Features",
+    content: `Learn how to use our advanced search capabilities:
+
+1. Filters - Use filters to narrow down results by status, date, or category
+2. Boolean Operators - Combine terms with AND, OR, NOT
+3. Exact Phrases - Use quotes for exact matches ("example phrase")
+4. Date Ranges - Search within specific time periods
+5. Saved Searches - Save frequently used search queries`,
+    is_public: true
+  },
+  {
+    title: "Account Security Best Practices",
+    content: `Protect your account with these security measures:
+
+1. Use Strong Passwords - Combine letters, numbers, and symbols
+2. Enable Two-Factor Authentication (2FA)
+3. Regular Security Audits - Review account activity
+4. Secure Password Storage - Use a password manager
+5. Session Management - Log out from unused sessions
+6. Security Notifications - Enable alerts for suspicious activity`,
+    is_public: true
+  },
+  {
+    title: "Mobile App Features Guide",
+    content: `Discover key features of our mobile app:
+
+1. Push Notifications - Stay updated on the go
+2. Offline Mode - Access essential features without internet
+3. Quick Actions - Swipe gestures for common tasks
+4. File Attachments - Upload photos and documents
+5. Dark Mode - Comfortable viewing in low light
+6. Biometric Login - Use fingerprint or face recognition`,
+    is_public: true
+  },
+  {
+    title: "Team Collaboration Tips",
+    content: `Maximize team productivity with these collaboration features:
+
+1. Shared Views - Create and share custom workspace views
+2. Team Inbox - Manage requests collaboratively
+3. Internal Notes - Add private team comments
+4. Assignment Rules - Automate ticket distribution
+5. Team Analytics - Track performance metrics
+6. Knowledge Sharing - Build internal documentation`,
+    is_public: true
+  },
+  {
+    title: "API Integration Overview",
+    content: `Get started with our API integration:
+
+1. Authentication - Obtain and use API keys
+2. Rate Limits - Understand usage limits
+3. Endpoints - Common API endpoints reference
+4. Webhooks - Set up real-time notifications
+5. Error Handling - Common errors and solutions
+6. Best Practices - Optimization and security tips`,
+    is_public: true
+  },
+  {
+    title: "Data Export and Reporting",
+    content: `Learn about data export and reporting options:
+
+1. Custom Reports - Build tailored reports
+2. Export Formats - CSV, JSON, and PDF options
+3. Scheduled Reports - Automate report generation
+4. Data Visualization - Charts and dashboards
+5. Metrics Tracking - Key performance indicators
+6. Data Retention - Understanding data storage policies`,
+    is_public: true
   }
 ];
 
