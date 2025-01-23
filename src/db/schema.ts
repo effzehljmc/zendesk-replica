@@ -90,6 +90,20 @@ export const settings = pgTable('settings', {
   updatedById: uuid('updated_by_id').references(() => profiles.id)
 });
 
+export const ticketMessages = pgTable('ticket_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ticketId: uuid('ticket_id')
+    .notNull()
+    .references(() => tickets.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id')
+    .references(() => profiles.id)
+    .notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   userRoles: many(userRoles),
@@ -112,7 +126,8 @@ export const ticketsRelations = relations(tickets, ({ one, many }) => ({
     relationName: 'agentTickets'
   }),
   notes: many(ticketNotes),
-  tags: many(ticketTags)
+  tags: many(ticketTags),
+  messages: many(ticketMessages)
 }));
 
 export const ticketNotesRelations = relations(ticketNotes, ({ one }) => ({
@@ -159,6 +174,17 @@ export const kbArticlesRelations = relations(kbArticles, ({ one }) => ({
 export const settingsRelations = relations(settings, ({ one }) => ({
   updatedBy: one(profiles, {
     fields: [settings.updatedById],
+    references: [profiles.id]
+  })
+}));
+
+export const ticketMessagesRelations = relations(ticketMessages, ({ one }) => ({
+  ticket: one(tickets, {
+    fields: [ticketMessages.ticketId],
+    references: [tickets.id]
+  }),
+  user: one(profiles, {
+    fields: [ticketMessages.userId],
     references: [profiles.id]
   })
 })); 

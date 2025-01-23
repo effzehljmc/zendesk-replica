@@ -30,6 +30,7 @@ A modern, AI-powered helpdesk system built with React, TypeScript, Supabase, and
 - 📈 Status and priority updates
 - 🔒 Role-based access (Admin/Agent only)
 - 📝 Ticket notes
+- 💬 Real-time ticket messages
 - 🏷️ Tag system
 - ⭐ Customer satisfaction ratings
 - ⏱️ Response time tracking
@@ -224,6 +225,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Designed for scalability and maintainability
 
 ## Recent Updates
+
+### Ticket Communication Enhancement
+- Added real-time messaging system for tickets
+- Implemented message deletion for message owners
+- Added real-time updates for all ticket participants
+- Enhanced ticket detail page with separate message and notes sections
+- Improved user experience with real-time message delivery
 
 ### Analytics Dashboard Enhancement
 - Added dedicated analytics page for agents and admins
