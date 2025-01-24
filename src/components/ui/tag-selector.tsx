@@ -137,10 +137,15 @@ export function TagSelector({ selectedTags, onTagsChange, maxTags = 3 }: TagSele
             </CommandEmpty>
             <CommandGroup>
               {tags.map((tag) => (
-                <CommandItem
+                <button
+                  type="button"
                   key={tag.id}
-                  value={tag.name}
-                  onSelect={() => handleSelect(tag)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelect(tag);
+                  }}
+                  className="w-full flex items-center px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer focus:outline-none focus:bg-accent"
                 >
                   <Check
                     className={cn(
@@ -150,8 +155,8 @@ export function TagSelector({ selectedTags, onTagsChange, maxTags = 3 }: TagSele
                         : "opacity-0"
                     )}
                   />
-                  <TagComponent tag={tag} interactive={false} />
-                </CommandItem>
+                  <TagComponent tag={tag} interactive={true} />
+                </button>
               ))}
             </CommandGroup>
           </Command>
