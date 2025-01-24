@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthApiError } from '@supabase/supabase-js';
 
@@ -10,13 +10,16 @@ export function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signIn, user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (user && !loading) {
-      console.log('User is authenticated, navigating to dashboard');
-      navigate('/dashboard');
+      // Get the intended destination from location state, or default to dashboard
+      const from = (location.state as { from?: string })?.from || '/dashboard';
+      console.log('User is authenticated, navigating to:', from);
+      navigate(from, { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

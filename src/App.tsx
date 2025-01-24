@@ -46,20 +46,19 @@ function App() {
       <Router {...router}>
         <AuthProvider>
           <Routes>
-            {/* Public Routes */}
+            {/* Public Routes - Outside of any protection */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
-            
-            {/* Public Knowledge Base Routes */}
-            <Route path="/kb" element={<Layout />}>
-              <Route index element={<KnowledgeBase />} />
-              <Route path=":id" element={<KBArticle />} />
-            </Route>
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* Dashboard Routes */}
+              <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              
+              {/* Knowledge Base Routes */}
+              <Route path="/kb" element={<KnowledgeBase />} />
+              <Route path="/kb/:id" element={<KBArticle />} />
               
               {/* Analytics Route - Only for agents and admins */}
               <Route
@@ -91,7 +90,8 @@ function App() {
                 element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><TicketDetailPage /></RoleProtectedRoute>}
               />
             </Route>
-          </Routes>
+            
+            </Routes>
           <Toaster />
         </AuthProvider>
       </Router>
