@@ -31,6 +31,10 @@ A modern, AI-powered helpdesk system built with React, TypeScript, Supabase, and
 - 🔒 Role-based access (Admin/Agent only)
 - 📝 Ticket notes
 - 💬 Real-time ticket messages
+  - Message creation with attachments
+  - File upload support (up to 20MB)
+  - Message deletion for owners
+  - Real-time updates
 - 🏷️ Tag system
 - ⭐ Customer satisfaction ratings
 - ⏱️ Response time tracking

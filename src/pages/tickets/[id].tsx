@@ -43,7 +43,6 @@ export default function TicketDetailPage() {
         description: 'Status updated successfully',
       });
     } catch (err) {
-      console.error('Failed to update status:', err);
       toast({
         title: 'Error',
         description: 'Failed to update status',
@@ -60,7 +59,6 @@ export default function TicketDetailPage() {
         description: 'Priority updated successfully',
       });
     } catch (err) {
-      console.error('Failed to update priority:', err);
       toast({
         title: 'Error',
         description: 'Failed to update priority',
@@ -77,7 +75,6 @@ export default function TicketDetailPage() {
         description: 'Assignee updated successfully',
       });
     } catch (err) {
-      console.error('Failed to update assignee:', err);
       toast({
         title: 'Error',
         description: 'Failed to update assignee',
@@ -94,7 +91,6 @@ export default function TicketDetailPage() {
         description: 'Tags updated successfully',
       });
     } catch (err) {
-      console.error('Failed to update tags:', err);
       toast({
         title: 'Error',
         description: 'Failed to update tags',

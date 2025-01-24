@@ -104,6 +104,23 @@ export const ticketMessages = pgTable('ticket_messages', {
     .defaultNow(),
 });
 
+export const ticketMessageAttachments = pgTable('ticket_message_attachments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ticketMessageId: uuid('ticket_message_id')
+    .notNull()
+    .references(() => ticketMessages.id, { onDelete: 'cascade' }),
+  fileName: text('file_name').notNull(),
+  fileSize: integer('file_size').notNull(),
+  contentType: text('content_type').notNull(),
+  storagePath: text('storage_path').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   userRoles: many(userRoles),
@@ -178,7 +195,7 @@ export const settingsRelations = relations(settings, ({ one }) => ({
   })
 }));
 
-export const ticketMessagesRelations = relations(ticketMessages, ({ one }) => ({
+export const ticketMessagesRelations = relations(ticketMessages, ({ one, many }) => ({
   ticket: one(tickets, {
     fields: [ticketMessages.ticketId],
     references: [tickets.id]
@@ -186,5 +203,13 @@ export const ticketMessagesRelations = relations(ticketMessages, ({ one }) => ({
   user: one(profiles, {
     fields: [ticketMessages.userId],
     references: [profiles.id]
+  }),
+  attachments: many(ticketMessageAttachments)
+}));
+
+export const ticketMessageAttachmentsRelations = relations(ticketMessageAttachments, ({ one }) => ({
+  message: one(ticketMessages, {
+    fields: [ticketMessageAttachments.ticketMessageId],
+    references: [ticketMessages.id]
   })
 })); 
