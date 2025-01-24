@@ -4,10 +4,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useTicketMessages } from '@/hooks/useTicketMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatDistanceToNow } from 'date-fns';
-import { MoreVertical, Trash2 } from 'lucide-react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { HelpMessage } from './HelpMessage';
+import { Trash2 } from 'lucide-react';
+import { TicketMessage } from './TicketMessage';
+import { FileAttachment } from './FileAttachment';
+import type { FileUploadResponse } from '@/lib/file-upload';
+import { createMessageAttachment } from '@/lib/ticket-attachments';
 
 interface TicketMessagesProps {
   ticketId: string;
@@ -15,50 +16,62 @@ interface TicketMessagesProps {
 
 export function TicketMessages({ ticketId }: TicketMessagesProps) {
   const [newMessage, setNewMessage] = useState('');
+  const [pendingAttachments, setPendingAttachments] = useState<FileUploadResponse[]>([]);
   const { messages, isLoading, createMessage, deleteMessage } = useTicketMessages(ticketId);
   const { profile } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && pendingAttachments.length === 0) return;
 
     try {
-      await createMessage({
+      const message = await createMessage({
         content: newMessage.trim(),
       });
+
+      // Create attachments for the new message
+      if (pendingAttachments.length > 0) {
+        await Promise.all(
+          pendingAttachments.map(attachment =>
+            createMessageAttachment(message.id, attachment)
+          )
+        );
+      }
+
       setNewMessage('');
+      setPendingAttachments([]);
     } catch (error) {
       console.error('Failed to send message:', error);
     }
   };
 
-  const handleDelete = async (messageId: string) => {
+  const handleAttachmentUpload = async (messageId: string, attachment: FileUploadResponse) => {
+    // For new message composition, store attachments temporarily
+    if (!messageId) {
+      setPendingAttachments(current => [...current, attachment]);
+      return;
+    }
+
+    // For existing messages, create the attachment immediately
+    await createMessageAttachment(messageId, attachment);
+  };
+
+  const handleAttachmentDelete = async (messageId: string, attachmentId: string) => {
+    // For pending attachments in new message
+    if (!messageId) {
+      setPendingAttachments(current => 
+        current.filter(a => a.storagePath !== attachmentId)
+      );
+      return;
+    }
+  };
+
+  const handleMessageDelete = async (messageId: string) => {
     try {
       await deleteMessage(messageId);
     } catch (error) {
       console.error('Failed to delete message:', error);
     }
-  };
-
-  const renderMessageContent = (content: string) => {
-    // Check if content contains HelpMessage component
-    const match = content.match(/<HelpMessage.*?\/>/);
-    if (match) {
-      // Extract props from the component string
-      const propsMatch = match[0].match(/ticketId="(.*?)" articleId="(.*?)" articleTitle="(.*?)"/);
-      if (propsMatch) {
-        const [_, msgTicketId, articleId, articleTitle] = propsMatch;
-        return (
-          <HelpMessage
-            ticketId={msgTicketId}
-            articleId={articleId}
-            articleTitle={articleTitle}
-          />
-        );
-      }
-    }
-    // If no HelpMessage, render as normal text
-    return <div className="whitespace-pre-wrap">{content}</div>;
   };
 
   if (isLoading) {
@@ -78,8 +91,37 @@ export function TicketMessages({ ticketId }: TicketMessagesProps) {
           placeholder="Type your message..."
           className="min-h-[100px]"
         />
-        <div className="flex justify-end">
-          <Button type="submit" disabled={!newMessage.trim()}>
+        
+        {/* Display pending attachments */}
+        {pendingAttachments.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-sm text-muted-foreground">Pending Attachments:</div>
+            <div className="space-y-2">
+              {pendingAttachments.map((attachment) => (
+                <div key={attachment.storagePath} className="flex items-center gap-2">
+                  <span className="text-sm">{attachment.fileName}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleAttachmentDelete('', attachment.storagePath)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-between items-center">
+          <FileAttachment
+            ticketId={ticketId}
+            onFileUploaded={(fileData) => handleAttachmentUpload('', fileData)}
+          />
+          <Button 
+            type="submit" 
+            disabled={!newMessage.trim() && pendingAttachments.length === 0}
+          >
             Send Message
           </Button>
         </div>
@@ -87,40 +129,25 @@ export function TicketMessages({ ticketId }: TicketMessagesProps) {
 
       <div className="space-y-4">
         {messages.map((message) => (
-          <div
+          <TicketMessage
             key={message.id}
-            className="border rounded-lg p-4 space-y-2"
-          >
-            <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{message.user?.fullName}</span>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                </div>
-              </div>
-              {message.userId === profile?.id && (
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Content align="end" className="w-[160px]">
-                    <DropdownMenu.Item 
-                      className="cursor-pointer flex items-center p-2 text-sm text-red-600" 
-                      onClick={() => handleDelete(message.id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Root>
-              )}
-            </div>
-            {renderMessageContent(message.content)}
-          </div>
+            message={{
+              id: message.id,
+              content: message.content,
+              createdAt: new Date(message.createdAt),
+              user: {
+                id: message.userId,
+                fullName: message.user?.fullName ?? null,
+                email: message.user?.email ?? ''
+              },
+              attachments: message.attachments
+            }}
+            ticketId={ticketId}
+            onAttachmentUpload={handleAttachmentUpload}
+            onAttachmentDelete={handleAttachmentDelete}
+            onMessageDelete={handleMessageDelete}
+            isCurrentUser={message.userId === profile?.id}
+          />
         ))}
       </div>
     </div>

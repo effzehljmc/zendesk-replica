@@ -3,14 +3,10 @@ import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+// We don't need to redefine these since we're using the shared supabase client
+// which already has the correct environment variables
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-async function main() {
+async function checkConstraints() {
   try {
     // First, check existing constraints
     const { data: constraints, error: checkError } = await supabase
@@ -74,4 +70,4 @@ async function main() {
   }
 }
 
-main(); 
+checkConstraints(); 

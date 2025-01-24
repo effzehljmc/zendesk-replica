@@ -69,7 +69,13 @@ export function useTickets() {
         query = query.eq('customer_id', profile.id);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query
+        .order('priority', {
+          ascending: false,
+          foreignTable: undefined,
+          nullsFirst: false
+        })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 

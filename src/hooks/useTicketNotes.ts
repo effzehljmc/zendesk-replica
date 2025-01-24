@@ -43,12 +43,10 @@ export function useTicketNotes(ticketId: string) {
 
   useEffect(() => {
     if (ticketId) {
-      console.log('Setting up real-time subscription for ticket:', ticketId);
       fetchNotes();
 
       // Create a unique channel name for this ticket
       const channelName = `ticket_notes_${ticketId}`;
-      console.log('Creating channel:', channelName);
 
       // Subscribe to realtime updates
       const channel = supabase
@@ -62,11 +60,8 @@ export function useTicketNotes(ticketId: string) {
             filter: `ticket_id=eq.${ticketId}`
           },
           async (payload: RealtimePostgresChangesPayload<TicketNoteResponse>) => {
-            console.log('Realtime update received:', payload);
-
             // For INSERT and UPDATE events, fetch the complete note data including created_by
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-              console.log('Fetching complete note data for:', payload.new.id);
               const { data: noteData, error: noteError } = await supabase
                 .from('ticket_notes')
                 .select(`
@@ -80,7 +75,6 @@ export function useTicketNotes(ticketId: string) {
                 .single();
 
               if (!noteError && noteData) {
-                console.log('Received note data:', noteData);
                 const transformedNote = {
                   id: noteData.id,
                   content: noteData.content,
@@ -94,7 +88,6 @@ export function useTicketNotes(ticketId: string) {
                 };
 
                 setNotes(currentNotes => {
-                  console.log('Updating notes state:', { currentNotes, transformedNote });
                   const index = currentNotes.findIndex(n => n.id === noteData.id);
                   if (index >= 0) {
                     // Update existing note
@@ -105,11 +98,8 @@ export function useTicketNotes(ticketId: string) {
                   // For new notes, don't add them here as they're already added optimistically
                   return currentNotes;
                 });
-              } else {
-                console.error('Error fetching note data:', noteError);
               }
             } else if (payload.eventType === 'DELETE') {
-              console.log('Removing deleted note:', payload.old.id);
               // Remove the deleted note from the state
               setNotes(currentNotes => 
                 currentNotes.filter(note => note.id !== payload.old.id)
@@ -117,20 +107,16 @@ export function useTicketNotes(ticketId: string) {
             }
           }
         )
-        .subscribe((status) => {
-          console.log('Subscription status:', status);
-        });
+        .subscribe();
 
       return () => {
-        console.log('Cleaning up subscription for ticket:', ticketId);
-        supabase.removeChannel(channel);
+        channel.unsubscribe();
       };
     }
   }, [ticketId]);
 
   const fetchNotes = async () => {
     try {
-      console.log('Fetching notes for ticket:', ticketId);
       const { data, error } = await supabase
         .from('ticket_notes')
         .select(`
@@ -158,11 +144,9 @@ export function useTicketNotes(ticketId: string) {
         } : undefined,
       }));
 
-      console.log('Setting notes state:', transformedNotes);
       setNotes(transformedNotes);
       setError(null);
     } catch (err) {
-      console.error('Error fetching ticket notes:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch ticket notes'));
       toast({
         title: 'Error',
@@ -176,33 +160,14 @@ export function useTicketNotes(ticketId: string) {
 
   const createNote = async (data: CreateNoteData) => {
     try {
-      if (!profile?.id) {
-        throw new Error('No profile found');
-      }
-
-      console.log('Creating note:', { ticketId, data, profileId: profile.id });
-      
-      // Check if this is an agent/admin
-      const isAgentOrAdmin = profile.roles?.some(r => r.name === 'admin' || r.name === 'agent');
-      
-      // Create the note first
-      const { data: newNote, error: createError } = await supabase
-        .rpc('create_ticket_note', {
-          p_ticket_id: ticketId,
-          p_content: data.content,
-          p_created_by_id: profile.id,
-          p_is_agent_or_admin: isAgentOrAdmin,
-          p_visibility: data.visibility || 'private'
-        });
-
-      if (createError) {
-        console.error('Error creating note:', createError);
-        throw createError;
-      }
-
-      // Then fetch the complete note data with profile
-      const { data: noteData, error: fetchError } = await supabase
+      const { data: noteData, error } = await supabase
         .from('ticket_notes')
+        .insert({
+          ticket_id: ticketId,
+          content: data.content,
+          visibility: data.visibility,
+          created_by_id: profile?.id,
+        })
         .select(`
           *,
           created_by:profiles!ticket_notes_created_by_id_fkey (
@@ -210,15 +175,9 @@ export function useTicketNotes(ticketId: string) {
             full_name
           )
         `)
-        .eq('id', newNote[0].id)
         .single();
 
-      if (fetchError) {
-        console.error('Error fetching note data:', fetchError);
-        throw fetchError;
-      }
-
-      console.log('Note created successfully:', noteData);
+      if (error) throw error;
 
       // Transform and add the new note immediately
       const transformedNote = {
@@ -248,26 +207,20 @@ export function useTicketNotes(ticketId: string) {
         description: 'Note created successfully',
       });
     } catch (err) {
-      console.error('Error creating note:', err);
       throw err instanceof Error ? err : new Error('Failed to create note');
     }
   };
 
   const updateNote = async (noteId: string, data: CreateNoteData) => {
     try {
-      if (!profile?.id) {
-        throw new Error('No profile found');
-      }
-
-      console.log('Updating note:', { noteId, data });
-      const { data: updatedNote, error } = await supabase
+      const { data: noteData, error } = await supabase
         .from('ticket_notes')
         .update({
           content: data.content,
           visibility: data.visibility,
         })
         .eq('id', noteId)
-        .eq('created_by_id', profile.id)
+        .eq('created_by_id', profile?.id)
         .select(`
           *,
           created_by:profiles!ticket_notes_created_by_id_fkey (
@@ -279,24 +232,22 @@ export function useTicketNotes(ticketId: string) {
 
       if (error) throw error;
 
-      console.log('Note updated successfully:', updatedNote);
-
       // Transform and update the note immediately
       const transformedNote = {
-        id: updatedNote.id,
-        content: updatedNote.content,
-        visibility: updatedNote.visibility,
-        createdAt: updatedNote.created_at,
-        updatedAt: updatedNote.updated_at,
-        createdBy: updatedNote.created_by ? {
-          id: updatedNote.created_by.id,
-          fullName: updatedNote.created_by.full_name,
+        id: noteData.id,
+        content: noteData.content,
+        visibility: noteData.visibility,
+        createdAt: noteData.created_at,
+        updatedAt: noteData.updated_at,
+        createdBy: noteData.created_by ? {
+          id: noteData.created_by.id,
+          fullName: noteData.created_by.full_name,
         } : undefined,
       };
 
       // Update the state immediately
       setNotes(currentNotes => {
-        const index = currentNotes.findIndex(n => n.id === noteId);
+        const index = currentNotes.findIndex(note => note.id === noteId);
         if (index >= 0) {
           const updatedNotes = [...currentNotes];
           updatedNotes[index] = transformedNote;
@@ -310,14 +261,12 @@ export function useTicketNotes(ticketId: string) {
         description: 'Note updated successfully',
       });
     } catch (err) {
-      console.error('Error updating note:', err);
       throw err instanceof Error ? err : new Error('Failed to update note');
     }
   };
 
   const deleteNote = async (noteId: string) => {
     try {
-      console.log('Deleting note:', noteId);
       const { error } = await supabase
         .from('ticket_notes')
         .delete()
@@ -325,8 +274,6 @@ export function useTicketNotes(ticketId: string) {
         .eq('created_by_id', profile?.id);
 
       if (error) throw error;
-
-      console.log('Note deleted successfully');
 
       // Update the state immediately
       setNotes(currentNotes => currentNotes.filter(note => note.id !== noteId));
@@ -336,7 +283,6 @@ export function useTicketNotes(ticketId: string) {
         description: 'Note deleted successfully',
       });
     } catch (err) {
-      console.error('Error deleting note:', err);
       throw err instanceof Error ? err : new Error('Failed to delete note');
     }
   };
