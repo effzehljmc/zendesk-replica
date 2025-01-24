@@ -2,6 +2,7 @@ import { ExternalLink, ThumbsDown, ThumbsUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
+import { Link } from "react-router-dom"
 
 interface HelpMessageProps {
   ticketId: string;
@@ -30,13 +31,11 @@ export function HelpMessage({ ticketId, articleId, articleTitle }: HelpMessagePr
         <p className="font-medium">{articleTitle}</p>
 
         <div className="grid gap-3">
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => window.open(`/kb/${articleId}`, "_blank")}
-          >
-            <ExternalLink className="w-4 h-4 mr-2" />
-            View knowledge base article
+          <Button asChild variant="outline" className="w-full justify-start">
+            <Link to={`/kb/${articleId}?ticketId=${ticketId}`}>
+              <ExternalLink className="w-4 h-4 mr-2" />
+              View knowledge base article
+            </Link>
           </Button>
 
           <div className="grid grid-cols-2 gap-3">

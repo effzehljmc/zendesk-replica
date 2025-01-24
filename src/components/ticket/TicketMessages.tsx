@@ -140,7 +140,10 @@ export function TicketMessages({ ticketId }: TicketMessagesProps) {
                 fullName: message.user?.fullName ?? null,
                 email: message.user?.email ?? ''
               },
-              attachments: message.attachments
+              attachments: message.attachments?.map(att => ({
+                ...att,
+                contentType: att.contentType || 'application/octet-stream'
+              }))
             }}
             ticketId={ticketId}
             onAttachmentUpload={handleAttachmentUpload}
