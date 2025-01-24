@@ -76,7 +76,7 @@ export default function UserDetail() {
         const { count: ticketCount, error: ticketError } = await supabase
           .from('tickets')
           .select('*', { count: 'exact' })
-          .eq('created_by', id);
+          .eq('customer_id', id);
 
         if (ticketError) throw ticketError;
 
