@@ -74,21 +74,82 @@ A modern, AI-powered helpdesk system built with React, TypeScript, Supabase, and
 - 🎯 Accessible components using Radix UI
 - 🌙 Dark mode support (planned)
 
+### Automatic Knowledge Base Suggestions
+
+The system automatically suggests relevant knowledge base articles to users when they create tickets, using AI-powered similarity matching:
+
+1. **Real-time Suggestions**
+   - When creating a ticket, users see suggested articles based on their title and description
+   - Articles are ranked by relevance using vector similarity search
+   - Helps users find solutions before submitting tickets
+
+2. **Automated First Response**
+   - When a new ticket is created, the system:
+     - Generates embeddings for the ticket content using OpenAI
+     - Searches for matching KB articles using PostgreSQL's vector similarity
+     - Automatically posts relevant articles if a good match is found (similarity > 75%)
+   - Users can:
+     - View the suggested article
+     - Mark their ticket as resolved if the article helped
+     - Request further assistance if needed
+
+3. **Technical Implementation**
+   - Uses OpenAI embeddings to convert text into vector representations
+   - Stores embeddings in Supabase using the pgvector extension
+   - Performs real-time similarity search using cosine distance
+   - Combines database triggers and client-side automation for a seamless experience
+
 ## Tech Stack
 
-- **Frontend:**
-  - React 18 + TypeScript
-  - Vite (Build tool)
-  - TailwindCSS + shadcn/ui (Styling)
-  - React Router v6 (Navigation)
-  - React Hook Form (Form handling)
-  - Radix UI (Accessible components)
-  - Lucide React (Icons)
+- **Frontend**: React, TypeScript, TailwindCSS
+- **Backend**: Supabase (PostgreSQL)
+- **AI/ML**: OpenAI API for embeddings
+- **Vector Search**: pgvector extension
+- **Real-time**: Supabase Realtime subscriptions
 
-- **Backend:**
-  - Supabase (Database & Auth)
-  - Drizzle ORM (Type-safe DB queries)
-  - PostgreSQL (Database)
+## Architecture
+
+### Automatic Response Flow
+
+1. **Ticket Creation**
+   ```
+   User creates ticket → Generate embedding → Search KB articles → Post automated response
+   ```
+
+2. **Vector Search**
+   ```
+   Ticket content → OpenAI embedding → pgvector similarity search → Best matching articles
+   ```
+
+3. **Response Mechanism**
+   ```
+   Match found → Create automated message → Display interactive response UI
+   ```
+
+The system combines several components to provide automated assistance:
+
+1. **Embedding Generation**
+   - Uses OpenAI's text-embedding-ada-002 model
+   - Converts ticket title and description into vector representations
+   - Enables semantic search beyond simple keyword matching
+
+2. **Vector Similarity Search**
+   - Utilizes PostgreSQL's pgvector extension
+   - Performs cosine similarity search against KB article embeddings
+   - Returns articles ranked by relevance score (0-1)
+
+3. **Automated Response System**
+   - Database trigger creates initial "Checking..." message
+   - Client-side automation finds best matching articles
+   - Interactive UI allows users to:
+     - View full article
+     - Mark issue as resolved
+     - Request human assistance
+
+4. **Real-time Updates**
+   - Supabase Realtime keeps UI in sync
+   - Instant feedback on ticket status changes
+   - Live updates for new messages and responses
 
 ## Environment Setup
 

@@ -119,7 +119,7 @@ export default function TicketDetailPage() {
       </Button>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Ticket #{ticket.ticket_number}</h1>
+        <h1 className="text-2xl font-bold mb-2">Ticket Details</h1>
         <h2 className="text-xl">{ticket.title}</h2>
       </div>
 
@@ -146,9 +146,9 @@ export default function TicketDetailPage() {
           )}
         </div>
 
-        <div className="space-y-2">
-          <div className="text-sm text-muted-foreground">Priority</div>
-          {canManageTicket ? (
+        {canManageTicket && (
+          <div className="space-y-2">
+            <div className="text-sm text-muted-foreground">Priority</div>
             <Select
               value={ticket.priority}
               onValueChange={handlePriorityChange}
@@ -163,13 +163,11 @@ export default function TicketDetailPage() {
                 <SelectItem value="urgent">Urgent</SelectItem>
               </SelectContent>
             </Select>
-          ) : (
-            <Badge>{ticket.priority}</Badge>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="space-y-2">
-          <div className="text-sm text-muted-foreground">Assigned To</div>
+          <div className="text-sm text-muted-foreground">Assigned Agent</div>
           {canManageTicket ? (
             <Select
               value={ticket.assigned_to_id || 'unassigned'}

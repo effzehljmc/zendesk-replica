@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { MoreVertical, Trash2 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { HelpMessage } from './HelpMessage';
 
 interface TicketMessagesProps {
   ticketId: string;
@@ -37,6 +38,27 @@ export function TicketMessages({ ticketId }: TicketMessagesProps) {
     } catch (error) {
       console.error('Failed to delete message:', error);
     }
+  };
+
+  const renderMessageContent = (content: string) => {
+    // Check if content contains HelpMessage component
+    const match = content.match(/<HelpMessage.*?\/>/);
+    if (match) {
+      // Extract props from the component string
+      const propsMatch = match[0].match(/ticketId="(.*?)" articleId="(.*?)" articleTitle="(.*?)"/);
+      if (propsMatch) {
+        const [_, msgTicketId, articleId, articleTitle] = propsMatch;
+        return (
+          <HelpMessage
+            ticketId={msgTicketId}
+            articleId={articleId}
+            articleTitle={articleTitle}
+          />
+        );
+      }
+    }
+    // If no HelpMessage, render as normal text
+    return <div className="whitespace-pre-wrap">{content}</div>;
   };
 
   if (isLoading) {
@@ -97,7 +119,7 @@ export function TicketMessages({ ticketId }: TicketMessagesProps) {
                 </DropdownMenu.Root>
               )}
             </div>
-            <div className="whitespace-pre-wrap">{message.content}</div>
+            {renderMessageContent(message.content)}
           </div>
         ))}
       </div>
