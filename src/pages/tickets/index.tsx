@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { useTags } from "@/hooks/useTags";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tag as TagComponent } from "@/components/ui/tag";
 import { Tag, TicketStatus, TicketPriority } from "@/types/ticket";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const statusColors: Record<TicketStatus, string> = {
   new: "bg-blue-100 text-blue-800",
@@ -39,6 +40,8 @@ export default function TicketsPage() {
   const [tagFilter, setTagFilter] = useState<string>("all");
   const { tickets, isLoading } = useTickets();
   const { tags } = useTags();
+  const { isAgent, isAdmin } = useUserRole();
+  const canManageTicket = isAgent || isAdmin;
 
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch = 
@@ -48,34 +51,22 @@ export default function TicketsPage() {
       ticket.customer?.email?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
-    const matchesPriority = priorityFilter === "all" || ticket.priority === priorityFilter;
+    const matchesPriority = !canManageTicket || priorityFilter === "all" || ticket.priority === priorityFilter;
     const matchesTag = tagFilter === "all" || ticket.tags?.some(tag => tag.id === tagFilter);
 
     return matchesSearch && matchesStatus && matchesPriority && matchesTag;
   });
 
-  useEffect(() => {
-    filteredTickets.forEach(ticket => {
-      console.log('Rendering tags for ticket:', ticket.id, ticket.tags);
-      ticket.tags?.forEach(tag => {
-        console.log('Rendering tag:', tag);
-      });
-    });
-  }, [filteredTickets]);
-
   if (isLoading) {
-    return <div className="p-6"><Skeleton className="h-48 w-full" /></div>;
+    return <div className="p-6"><Skeleton className="h-[400px]" /></div>;
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Tickets</h1>
-          <p className="text-muted-foreground">Manage support tickets and track their status</p>
-        </div>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Tickets</h1>
         <Button onClick={() => navigate("/tickets/create")}>
-          + Create Ticket
+          Create Ticket
         </Button>
       </div>
 
@@ -99,18 +90,20 @@ export default function TicketsPage() {
             <SelectItem value="closed">Closed</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Priority" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Priority</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="urgent">Urgent</SelectItem>
-          </SelectContent>
-        </Select>
+        {canManageTicket && (
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priority</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
         <Select value={tagFilter} onValueChange={setTagFilter}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Tags" />
@@ -138,7 +131,9 @@ export default function TicketsPage() {
             <tr className="border-b bg-muted/50">
               <th className="text-left p-4 font-medium">Ticket</th>
               <th className="text-left p-4 font-medium">Status</th>
-              <th className="text-left p-4 font-medium">Priority</th>
+              {canManageTicket && (
+                <th className="text-left p-4 font-medium">Priority</th>
+              )}
               <th className="text-left p-4 font-medium">Tags</th>
               <th className="text-left p-4 font-medium">Created</th>
               <th className="text-left p-4 font-medium">Assigned To</th>
@@ -161,16 +156,18 @@ export default function TicketsPage() {
                     {ticket.status}
                   </Badge>
                 </td>
-                <td className="p-4">
-                  <Badge className={priorityColors[ticket.priority as TicketPriority]}>
-                    {ticket.priority}
-                  </Badge>
-                </td>
+                {canManageTicket && (
+                  <td className="p-4">
+                    <Badge className={priorityColors[ticket.priority as TicketPriority]}>
+                      {ticket.priority}
+                    </Badge>
+                  </td>
+                )}
                 <td className="p-4">
                   <div className="flex flex-wrap gap-1">
-                    {ticket.tags?.map((tag: Tag) => (
-                      <TagComponent key={tag.id} tag={tag} interactive={false} />
-                    ))}
+                    {ticket.tags?.map((tag: Tag) => {
+                      return <TagComponent key={tag.id} tag={tag} interactive={false} />;
+                    })}
                   </div>
                 </td>
                 <td className="p-4 text-sm text-muted-foreground">

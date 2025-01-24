@@ -23,6 +23,7 @@ export interface Ticket {
   assigned_to_id: string | null;
   created_at: string;
   updated_at: string;
+  firstResponseAt: string | null;
   customer?: {
     id: string;
     full_name: string | null;
