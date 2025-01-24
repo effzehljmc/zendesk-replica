@@ -168,12 +168,22 @@ export function AdminDashboard() {
                   <LineChart data={stats?.recentTickets}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(date: string) => new Date(date).toLocaleDateString()}
+                      dataKey="date"
+                      type="category"
+                      tickFormatter={(date: string) => {
+                        const localDate = new Date(date + 'T00:00:00');
+                        return localDate.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
+                      }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
                     />
                     <YAxis />
                     <Tooltip 
-                      labelFormatter={(date: string) => new Date(date).toLocaleDateString()}
+                      labelFormatter={(date: string) => {
+                        const localDate = new Date(date + 'T00:00:00');
+                        return localDate.toLocaleDateString();
+                      }}
                     />
                     <Legend />
                     <Line 

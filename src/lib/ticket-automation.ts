@@ -72,7 +72,7 @@ async function createAutomatedKBMessage(ticketId: string, kbArticle: KBArticle &
   console.log('💬 Creating automated message for ticket:', ticketId);
   
   const content = `
-👋 I found a knowledge base article that might solve your problem:
+👋 I found a help article that might solve your problem:
 
 <HelpMessage ticketId="${ticketId}" articleId="${kbArticle.id}" articleTitle="${kbArticle.title}" />
 `;

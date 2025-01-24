@@ -31,9 +31,11 @@ export function SatisfactionTrend() {
                 type="category"
                 tickFormatter={(date: string) => {
                   const localDate = new Date(date + 'T00:00:00');
-                  return localDate.toLocaleDateString();
+                  return localDate.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
                 }}
-                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={60}
               />
               <YAxis 
                 domain={[0, 5]} 
