@@ -103,6 +103,38 @@ The system automatically suggests relevant knowledge base articles to users when
    - Performs real-time similarity search using cosine distance
    - Combines database triggers and client-side automation for a seamless experience
 
+### AI Features
+- 🤖 Knowledge Base Integration
+  - Semantic search using OpenAI embeddings
+  - Configurable match threshold and result limit
+  - Real-time article matching
+- 🎯 AI Suggestions System
+  - Automated response suggestions
+  - Confidence scoring
+  - Metadata tracking for suggestions
+  - System user for AI interactions
+- 📊 AI Performance Monitoring
+  - Suggestion acceptance tracking
+  - Response time monitoring
+  - Error rate tracking
+
+### Technical Details
+
+#### Database Schema
+- Supabase PostgreSQL with Drizzle ORM
+- Role-based access control tables
+- Ticket management schema
+- Knowledge base articles
+- AI suggestions integration
+- Real-time messaging support
+
+#### AI Integration
+- OpenAI API integration for embeddings
+- RAG (Retrieval Augmented Generation) pipeline
+- Suggestion storage and retrieval system
+- Confidence-based sorting
+- Proper error handling and security measures
+
 ## Tech Stack
 
 - **Frontend**: React, TypeScript, TailwindCSS
