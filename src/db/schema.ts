@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { boolean, integer, jsonb, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { boolean, float, integer, jsonb, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -121,6 +121,17 @@ export const ticketMessageAttachments = pgTable('ticket_message_attachments', {
     .defaultNow()
 });
 
+export const aiSuggestions = pgTable('ai_suggestions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ticketId: uuid('ticket_id').notNull().references(() => tickets.id),
+  suggestedResponse: text('suggested_response').notNull(),
+  confidenceScore: float('confidence_score').notNull(),
+  systemUserId: uuid('system_user_id').notNull(),
+  metadata: jsonb('metadata').notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   userRoles: many(userRoles),
@@ -212,4 +223,11 @@ export const ticketMessageAttachmentsRelations = relations(ticketMessageAttachme
     fields: [ticketMessageAttachments.ticketMessageId],
     references: [ticketMessages.id]
   })
-})); 
+}));
+
+export const aiSuggestionsRelations = relations(aiSuggestions, ({ one }) => ({
+  ticket: one(tickets, {
+    fields: [aiSuggestions.ticketId],
+    references: [tickets.id]
+  })
+}));

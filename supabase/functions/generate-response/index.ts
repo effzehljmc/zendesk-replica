@@ -1,17 +1,20 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
-import { Configuration, OpenAIApi } from 'https://esm.sh/openai@3.2.1'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 interface RequestBody {
   ticket: {
+    id: string
     title: string
     description: string
   }
-  relevantArticles: Array<{
-    title: string
-    content: string
-    similarity: number
-  }>
+}
+
+interface KBArticle {
+  id: string
+  title: string
+  content: string
+  similarity: number
 }
 
 interface ResponseBody {
@@ -31,17 +34,46 @@ serve(async (req) => {
   }
 
   try {
-    const openai = new OpenAIApi(
-      new Configuration({
-        apiKey: Deno.env.get('OPENAI_API_KEY')
-      })
+    // Log environment variables (without exposing sensitive values)
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!Deno.env.get('SUPABASE_URL'),
+      hasServiceRoleKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      hasOpenAIKey: !!Deno.env.get('OPENAI_API_KEY')
+    })
+
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     // Parse request body
-    const { ticket, relevantArticles } = await req.json() as RequestBody
+    const { ticket } = await req.json() as RequestBody
+
+    // System user ID (AI Assistant)
+    const systemUserId = '4c03221f-179d-4cfd-a62e-a4f68d9a5764'
+
+    // Get relevant articles using match_kb_articles
+    const { data: articles, error: matchError } = await supabaseClient
+      .rpc('match_kb_articles', {
+        query_text: `${ticket.title}\n${ticket.description}`,
+        match_threshold: 0.5,
+        match_count: 3,
+        service_role_key: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      }) as { data: KBArticle[], error: any }
+
+    console.log('Match result:', {
+      hasError: !!matchError,
+      errorMessage: matchError?.message,
+      articleCount: articles?.length ?? 0
+    })
+
+    if (matchError) {
+      throw new Error(`Error matching KB articles: ${matchError.message}`)
+    }
 
     // Build context from relevant articles
-    const articleContext = relevantArticles
+    const articleContext = (articles || [])
       .map(article => `Article: ${article.title}\nContent: ${article.content}\nRelevance: ${(article.similarity * 100).toFixed(1)}%`)
       .join('\n\n')
 
@@ -63,41 +95,70 @@ Generate a response that:
 Response:`
 
     // Generate response using GPT-4
-    const completion = await openai.createChatCompletion({
-      model: 'gpt-4',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful customer support agent. Provide clear, concise, and accurate responses.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 500
+    const completion = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful customer support agent. Provide clear, concise, and accurate responses.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
     })
 
-    const response: ResponseBody = {
-      suggestedResponse: completion.data.choices[0].message?.content || '',
-      confidenceScore: calculateConfidence(relevantArticles),
+    const response = await completion.json()
+    const suggestedResponse = response.choices[0]?.message?.content || ''
+    const confidenceScore = calculateConfidence(articles || [])
+
+    // Store the suggestion
+    const { error: suggestionError } = await supabaseClient
+      .from('ai_suggestions')
+      .insert({
+        ticket_id: ticket.id,
+        suggested_response: suggestedResponse,
+        confidence_score: confidenceScore,
+        system_user_id: systemUserId,
+        metadata: {
+          usedArticles: (articles || []).map(a => a.id),
+          model: 'gpt-4',
+          temperature: 0.7
+        }
+      })
+
+    if (suggestionError) {
+      throw new Error(`Error storing suggestion: ${suggestionError.message}`)
+    }
+
+    // Return the response
+    const responseBody: ResponseBody = {
+      suggestedResponse,
+      confidenceScore,
       metadata: {
-        usedArticles: relevantArticles.map(a => a.title),
+        usedArticles: (articles || []).map(a => a.id),
         model: 'gpt-4',
         temperature: 0.7
       }
     }
 
-    return new Response(
-      JSON.stringify(response),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      }
-    )
+    return new Response(JSON.stringify(responseBody), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200
+    })
 
   } catch (error) {
+    console.error('Error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {
@@ -109,18 +170,15 @@ Response:`
 })
 
 // Helper function to calculate confidence based on article similarities
-function calculateConfidence(articles: Array<{ similarity: number }>): number {
-  if (articles.length === 0) return 0.3 // Base confidence for no articles
+function calculateConfidence(articles: KBArticle[]): number {
+  if (!articles.length) return 0
   
-  // Average of top 3 article similarities, weighted more towards higher similarities
-  const topSimilarities = articles
-    .map(a => a.similarity)
-    .sort((a, b) => b - a)
-    .slice(0, 3)
+  // Average similarity of matched articles
+  const avgSimilarity = articles.reduce((sum, article) => sum + article.similarity, 0) / articles.length
   
-  const weights = [0.5, 0.3, 0.2] // Weights for 1st, 2nd, and 3rd most similar articles
-  const weightedSum = topSimilarities.reduce((sum, sim, i) => sum + sim * (weights[i] || 0), 0)
-  
-  // Scale the final confidence between 0.3 and 0.95
-  return 0.3 + (weightedSum * 0.65)
+  // Scale to a 0-1 range where:
+  // - 0.5 similarity = 0.6 confidence
+  // - 0.7 similarity = 0.8 confidence
+  // - 0.9 similarity = 1.0 confidence
+  return Math.min(1, avgSimilarity * 1.2)
 }
