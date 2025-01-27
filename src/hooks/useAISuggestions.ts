@@ -1,69 +1,175 @@
-import { useState, useEffect } from 'react';
-import { generateAISuggestion, updateSuggestionStatus, getSuggestions } from '../lib/ai-suggestions';
-import type { AIMessageSuggestion, AIFeedback } from '../types/ai-suggestion';
+import { useSupabase } from '@/components/providers/supabase-provider';
+import { AIFeedback, AIMessageSuggestion } from '@/types/ai-suggestion';
+import { useCallback, useEffect, useState } from 'react';
+
+interface SuggestionState {
+  suggestion: AIMessageSuggestion;
+  status: 'loading' | 'success' | 'error';
+  error?: string;
+}
 
 export function useAISuggestions(ticketId: string) {
-  const [suggestions, setSuggestions] = useState<AIMessageSuggestion[]>([]);
+  const { supabase } = useSupabase();
+  const [suggestions, setSuggestions] = useState<SuggestionState[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
+  // Fetch initial suggestions
   useEffect(() => {
-    if (ticketId) {
-      loadSuggestions();
-    }
-  }, [ticketId]);
+    const fetchSuggestions = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('ai_suggestions')
+          .select('*')
+          .eq('ticket_id', ticketId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
 
-  const loadSuggestions = async () => {
-    try {
-      const data = await getSuggestions(ticketId);
-      setSuggestions(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load suggestions');
-    }
-  };
+        if (error) {
+          console.error('Error fetching suggestions:', error);
+          return;
+        }
 
-  const generateSuggestion = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await generateAISuggestion(ticketId);
-      if (response.success && response.suggestion) {
-        setSuggestions(prev => [response.suggestion, ...prev]);
-      } else {
-        setError(response.error || 'Failed to generate suggestion');
+        setSuggestions(
+          data.map((suggestion) => ({
+            suggestion,
+            status: 'success' as const,
+          }))
+        );
+      } catch (error) {
+        console.error('Error in fetchSuggestions:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate suggestion');
+    };
+
+    fetchSuggestions();
+  }, [ticketId, supabase]);
+
+  // Subscribe to changes
+  useEffect(() => {
+    const channel = supabase
+      .channel(`ai_suggestions:${ticketId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ai_suggestions',
+          filter: `ticket_id=eq.${ticketId}`,
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newSuggestion = payload.new as AIMessageSuggestion;
+            setSuggestions(currentSuggestions => {
+              // Check if suggestion already exists
+              const exists = currentSuggestions.some(s => s.suggestion.id === newSuggestion.id);
+              if (exists) {
+                return currentSuggestions;
+              }
+              return [...currentSuggestions, {
+                suggestion: newSuggestion,
+                status: 'success'
+              }];
+            });
+          } else if (payload.eventType === 'DELETE') {
+            setSuggestions(currentSuggestions => 
+              currentSuggestions.filter(s => s.suggestion.id !== payload.old.id)
+            );
+          } else if (payload.eventType === 'UPDATE') {
+            setSuggestions(currentSuggestions =>
+              currentSuggestions.map(s => 
+                s.suggestion.id === payload.new.id 
+                  ? { ...s, suggestion: payload.new as AIMessageSuggestion }
+                  : s
+              )
+            );
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to AI suggestions for ticket:', ticketId);
+        } else if (status === 'CLOSED') {
+          console.log('AI suggestions subscription closed for ticket:', ticketId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error in AI suggestions subscription for ticket:', ticketId);
+        }
+      });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [ticketId, supabase]);
+
+  const triggerSuggestion = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/ai/generate-suggestion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ticketId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate suggestion');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error triggering suggestion:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [ticketId]);
 
-  const provideFeedback = async (feedback: AIFeedback) => {
-    try {
-      const success = await updateSuggestionStatus(feedback);
-      if (success) {
-        setSuggestions(prev =>
-          prev.map(suggestion =>
-            suggestion.id === feedback.suggestionId
-              ? { ...suggestion, status: feedback.status }
-              : suggestion
-          )
-        );
+  const acceptSuggestion = useCallback(
+    async (suggestion_id: string, status: 'accepted' | 'rejected' = 'accepted', feedback?: string) => {
+      const feedback_data: AIFeedback = {
+        suggestion_id,
+        status,
+        feedback,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('ai_suggestions')
+        .update({
+          status,
+          feedback: feedback_data.feedback,
+          updated_at: feedback_data.updated_at,
+        })
+        .eq('id', suggestion_id);
+
+      if (error) {
+        console.error('Error updating suggestion:', error);
+        throw error;
       }
-      return success;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update suggestion');
-      return false;
-    }
-  };
+
+      // Remove the suggestion from local state immediately
+      setSuggestions(currentSuggestions => 
+        currentSuggestions.filter(s => s.suggestion.id !== suggestion_id)
+      );
+    },
+    [supabase]
+  );
+
+  const rejectSuggestion = useCallback(
+    async (suggestion_id: string, feedback?: string) => {
+      return acceptSuggestion(suggestion_id, 'rejected', feedback);
+    },
+    [acceptSuggestion]
+  );
 
   return {
     suggestions,
     isLoading,
-    error,
-    generateSuggestion,
-    provideFeedback,
-    refreshSuggestions: loadSuggestions
+    triggerSuggestion,
+    acceptSuggestion,
+    rejectSuggestion,
   };
 }

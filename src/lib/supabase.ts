@@ -11,7 +11,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Create a single instance of the Supabase client
 let instance: ReturnType<typeof createClient<Database>> | null = null;
 
-export const supabase = (() => {
+const supabaseClient = (() => {
   if (!instance) {
     instance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -21,10 +21,19 @@ export const supabase = (() => {
         autoRefreshToken: true,
         detectSessionInUrl: true
       },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      },
+      db: {
+        schema: 'public'
+      }
     });
   }
   return instance;
 })();
 
-// Export the same instance for shared usage
-export const supabaseShared = supabase; 
+// Export both default and named exports
+export default supabaseClient;
+export const supabase = supabaseClient;

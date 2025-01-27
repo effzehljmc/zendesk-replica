@@ -1,103 +1,93 @@
 import { supabase } from './supabase';
-import type { AIMessageSuggestion, CreateAISuggestionData, AIGenerationResponse, AIFeedback } from '../types/ai-suggestion';
-import { match_kb_articles } from './kb';
+import type { AIGenerationResponse, AIFeedback } from '../types/ai-suggestion';
+
+async function searchKnowledgeBase(query: string) {
+  const { data, error } = await supabase
+    .from('knowledge_base_articles')
+    .select('*')
+    .textSearch('content', query)
+    .limit(5);
+
+  if (error) {
+    console.error('Error searching knowledge base:', error);
+    return [];
+  }
+
+  return data;
+}
 
 export async function generateAISuggestion(ticketId: string): Promise<AIGenerationResponse> {
   try {
-    // 1. Get ticket details
+    // Get ticket details
     const { data: ticket, error: ticketError } = await supabase
       .from('tickets')
       .select('*')
       .eq('id', ticketId)
       .single();
 
-    if (ticketError) throw new Error(`Failed to fetch ticket: ${ticketError.message}`);
-    if (!ticket) throw new Error('Ticket not found');
-
-    // 2. Get relevant KB articles
-    const relevantArticles = await match_kb_articles(ticket.description);
-    
-    // 3. Call the Edge Function to generate AI response
-    const { data: suggestion, error: suggestionError } = await supabase.functions.invoke(
-      'on-ticket-created',
-      {
-        body: {
-          ticket_id: ticketId,
-          title: ticket.title,
-          description: ticket.description,
-          status: ticket.status
-        }
-      }
-    );
-
-    if (suggestionError) {
-      throw new Error(`Failed to generate AI response: ${suggestionError.message}`);
+    if (ticketError) {
+      throw ticketError;
     }
 
-    return {
-      success: true,
-      suggestion: suggestion as AIMessageSuggestion
-    };
+    // Search knowledge base for relevant articles
+    const relevantArticles = await searchKnowledgeBase(ticket.description);
 
+    // Call OpenAI API
+    const response = await fetch('/api/ai/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ticket,
+        relevantArticles,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate AI suggestion');
+    }
+
+    const data = await response.json();
+    return {
+      suggested_response: data.suggested_response,
+      confidence_score: data.confidence_score,
+      metadata: {
+        model: data.metadata.model,
+        temperature: data.metadata.temperature,
+        used_articles: data.metadata.used_articles
+      }
+    };
   } catch (error) {
     console.error('Error generating AI suggestion:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
+    throw error;
   }
 }
 
-export async function updateSuggestionStatus(feedback: AIFeedback): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('ai_suggestions')
-      .update({
-        status: feedback.status,
-        updatedAt: new Date().toISOString()
-      })
-      .eq('id', feedback.suggestionId);
-
-    if (error) throw error;
-
-    // If suggestion was accepted, create a ticket message
-    if (feedback.status === 'accepted') {
-      const { data: suggestion } = await supabase
-        .from('ai_suggestions')
-        .select('*')
-        .eq('id', feedback.suggestionId)
-        .single();
-
-      if (suggestion) {
-        await supabase
-          .from('ticket_messages')
-          .insert([{
-            ticketId: suggestion.ticketId,
-            content: suggestion.content,
-            userId: suggestion.userId, // This should be the system user ID
-            isAIGenerated: true
-          }]);
-      }
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error updating suggestion status:', error);
-    return false;
-  }
-}
-
-export async function getSuggestions(ticketId: string): Promise<AIMessageSuggestion[]> {
-  const { data, error } = await supabase
+export async function updateAISuggestionFeedback(feedback: AIFeedback): Promise<void> {
+  const { error } = await supabase
     .from('ai_suggestions')
-    .select('*')
-    .eq('ticketId', ticketId)
-    .order('createdAt', { ascending: false });
+    .update({
+      status: feedback.status,
+      feedback: feedback.feedback,
+      updated_at: feedback.updated_at
+    })
+    .eq('id', feedback.suggestion_id);
 
   if (error) {
-    console.error('Error fetching suggestions:', error);
-    return [];
+    console.error('Error updating AI suggestion feedback:', error);
+    throw error;
   }
+}
 
-  return data as AIMessageSuggestion[];
+export async function deleteAISuggestion(suggestion_id: string): Promise<void> {
+  const { error } = await supabase
+    .from('ai_suggestions')
+    .delete()
+    .eq('id', suggestion_id);
+
+  if (error) {
+    console.error('Error deleting AI suggestion:', error);
+    throw error;
+  }
 }

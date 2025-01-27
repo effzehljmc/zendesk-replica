@@ -22,9 +22,10 @@ export function useAgents() {
           .from('roles')
           .select('id')
           .eq('name', 'agent')
-          .single();
+          .maybeSingle();
 
         if (roleError) throw roleError;
+        if (!agentRoleData) throw new Error('Agent role not found');
 
         const { data: agents, error: agentsError } = await supabase
           .from('profiles')
