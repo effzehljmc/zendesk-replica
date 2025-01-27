@@ -88,22 +88,15 @@ export function useTickets() {
     }
   }, [profile?.id, isCustomer]);
 
-  useEffect(() => {
-    console.log('Setting up tickets subscription');
-    
-    if (!roleLoading) {
-      fetchTickets();
-    }
-
-    // Clean up previous subscription if it exists
+  const setupSubscription = useCallback(() => {
     if (channelRef.current) {
-      console.log('Cleaning up previous tickets subscription');
+      console.log('Cleaning up existing tickets subscription');
       channelRef.current.unsubscribe();
       channelRef.current = null;
     }
 
-    // Create new subscription
-    channelRef.current = supabase
+    console.log('Setting up new tickets subscription');
+    const channel = supabase
       .channel('tickets_changes')
       .on(
         'postgres_changes',
@@ -204,15 +197,25 @@ export function useTickets() {
         console.log('Tickets subscription status:', status);
         if (status === 'CHANNEL_ERROR') {
           console.error('Error in tickets subscription');
-          // Attempt to resubscribe on error
-          setTimeout(() => {
-            if (channelRef.current) {
-              console.log('Attempting to resubscribe...');
-              channelRef.current.subscribe();
-            }
-          }, 1000);
+          // Clean up and retry with a new subscription
+          if (channelRef.current) {
+            channelRef.current.unsubscribe();
+            channelRef.current = null;
+          }
+          setTimeout(() => setupSubscription(), 1000);
         }
       });
+
+    channelRef.current = channel;
+  }, [isCustomer, profile?.id]);
+
+  useEffect(() => {
+    console.log('Setting up tickets subscription');
+    
+    if (!roleLoading) {
+      fetchTickets();
+      setupSubscription();
+    }
 
     return () => {
       if (channelRef.current) {
@@ -221,7 +224,7 @@ export function useTickets() {
         channelRef.current = null;
       }
     };
-  }, [roleLoading, fetchTickets, isCustomer, profile?.id]);
+  }, [roleLoading, fetchTickets, setupSubscription]);
 
   return {
     tickets,

@@ -63,7 +63,7 @@ function transformMessage(message: TicketMessageResponse): TicketMessage {
       fullName: message.profiles?.full_name || 'Unknown',
       email: message.profiles?.email || ''
     },
-    attachments: message.ticket_message_attachments.map(attachment => ({
+    attachments: (message.ticket_message_attachments ?? []).map(attachment => ({
       id: attachment.id,
       fileName: attachment.file_name,
       fileSize: attachment.file_size,
@@ -88,6 +88,7 @@ export function useTicketMessages(ticketId: string) {
     }
 
     try {
+      console.log('Fetching messages for ticket:', ticketId);
       const { data, error } = await supabase
         .from('ticket_messages')
         .select(`
@@ -109,7 +110,18 @@ export function useTicketMessages(ticketId: string) {
 
       if (error) throw error;
 
-      setMessages(data.map(transformMessage));
+      console.log('Fetched messages:', {
+        count: data.length,
+        messages: data.map(m => ({
+          id: m.id,
+          content: m.content.substring(0, 50) + '...',
+          userId: m.user_id
+        }))
+      });
+
+      const transformedMessages = data.map(transformMessage);
+      setMessages(transformedMessages);
+      console.log('Set initial messages, count:', transformedMessages.length);
     } catch (err) {
       console.error('Error fetching messages:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch messages'));
@@ -118,18 +130,14 @@ export function useTicketMessages(ticketId: string) {
     }
   }, [ticketId, profile?.id]);
 
-  useEffect(() => {
-    console.log('Setting up ticket messages subscription for ticket:', ticketId);
-    fetchMessages();
-
-    // Clean up previous subscription if it exists
+  const setupSubscription = useCallback(() => {
     if (channelRef.current) {
-      console.log('Cleaning up previous subscription for ticket:', ticketId);
+      console.log('Cleaning up existing subscription for ticket:', ticketId);
       channelRef.current.unsubscribe();
       channelRef.current = null;
     }
 
-    // Create new subscription with more specific configuration
+    console.log('Setting up new subscription for ticket:', ticketId);
     const channel = supabase
       .channel(`ticket_messages:${ticketId}`)
       .on(
@@ -144,8 +152,30 @@ export function useTicketMessages(ticketId: string) {
           console.log('Received message update:', payload.eventType, 'for ticket:', ticketId, payload);
           
           if (payload.eventType === 'INSERT') {
+            // Immediately add the new message to state with available data
+            const newMessage = transformMessage(payload.new as TicketMessageResponse);
+            console.log('Attempting to add new message:', newMessage);
+            
+            setMessages(currentMessages => {
+              const exists = currentMessages.some(msg => msg.id === newMessage.id);
+              console.log('Message exists check:', {
+                messageId: newMessage.id,
+                exists,
+                currentCount: currentMessages.length
+              });
+              
+              if (exists) {
+                console.log('Message already exists, skipping update');
+                return currentMessages;
+              }
+              
+              const updatedMessages = [...currentMessages, newMessage];
+              console.log('Added new message, new count:', updatedMessages.length);
+              return updatedMessages;
+            });
+
+            // Then fetch complete data and update
             try {
-              // Fetch the complete message data immediately
               const { data: messageData, error: messageError } = await supabase
                 .from('ticket_messages')
                 .select(`
@@ -172,11 +202,14 @@ export function useTicketMessages(ticketId: string) {
 
               if (messageData) {
                 const transformedMessage = transformMessage(messageData);
+                console.log('Updating message with complete data:', transformedMessage);
+                
                 setMessages(currentMessages => {
-                  // Check if message already exists
-                  const exists = currentMessages.some(msg => msg.id === transformedMessage.id);
-                  if (exists) return currentMessages;
-                  return [...currentMessages, transformedMessage];
+                  const updatedMessages = currentMessages.map(msg =>
+                    msg.id === transformedMessage.id ? transformedMessage : msg
+                  );
+                  console.log('Updated message with complete data, count:', updatedMessages.length);
+                  return updatedMessages;
                 });
               }
             } catch (error) {
@@ -232,17 +265,22 @@ export function useTicketMessages(ticketId: string) {
           console.log('Successfully subscribed to messages for ticket:', ticketId);
         } else if (status === 'CHANNEL_ERROR') {
           console.error('Error in messages subscription for ticket:', ticketId);
-          // Attempt to resubscribe on error
-          setTimeout(() => {
-            if (channelRef.current === channel) {
-              console.log('Attempting to resubscribe...');
-              channel.subscribe();
-            }
-          }, 1000);
+          // Clean up and retry with a new subscription
+          if (channelRef.current) {
+            channelRef.current.unsubscribe();
+            channelRef.current = null;
+          }
+          setTimeout(() => setupSubscription(), 1000);
         }
       });
 
     channelRef.current = channel;
+  }, [ticketId]);
+
+  useEffect(() => {
+    console.log('Setting up ticket messages subscription for ticket:', ticketId);
+    fetchMessages();
+    setupSubscription();
 
     return () => {
       console.log('Unmounting: Cleaning up subscription for ticket:', ticketId);
@@ -251,7 +289,7 @@ export function useTicketMessages(ticketId: string) {
         channelRef.current = null;
       }
     };
-  }, [ticketId, fetchMessages]);
+  }, [ticketId, fetchMessages, setupSubscription]);
 
   const createMessage = async (data: CreateMessageData) => {
     if (!profile?.id) {
