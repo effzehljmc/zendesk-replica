@@ -13,4 +13,21 @@ frontend:
       - '**/*'
   cache:
     paths:
-      - .npm/**/* 
+      - .npm/**/*
+  customHeaders:
+    - pattern: '*.js'
+      headers:
+        - key: 'Content-Type'
+          value: 'application/javascript; charset=utf-8'
+    - pattern: '*.css'
+      headers:
+        - key: 'Content-Type'
+          value: 'text/css; charset=utf-8'
+    - pattern: '*.html'
+      headers:
+        - key: 'Content-Type'
+          value: 'text/html; charset=utf-8'
+    - pattern: '*.json'
+      headers:
+        - key: 'Content-Type'
+          value: 'application/json; charset=utf-8' 
