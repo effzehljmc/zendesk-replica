@@ -13,20 +13,4 @@ frontend:
       - '**/*'
   cache:
     paths:
-      - .npm/**/*
-  customHeaders:
-    - pattern: 'assets/*.js'
-      headers:
-        - key: 'Content-Type'
-          value: 'application/javascript; charset=utf-8'
-    - pattern: 'assets/*.css'
-      headers:
-        - key: 'Content-Type'
-          value: 'text/css; charset=utf-8'
-  rewrites:
-    - source: 'assets/*'
-      target: '/assets/:splat'
-      status: '200'
-    - source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>'
-      target: '/index.html'
-      status: '200' 
+      - .npm/**/* 

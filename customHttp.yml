@@ -1,0 +1,13 @@
+customHeaders:
+  - pattern: '*.js'
+    headers:
+      - key: 'Content-Type'
+        value: 'application/javascript'
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+  - pattern: '*.css'
+    headers:
+      - key: 'Content-Type'
+        value: 'text/css'
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff' 
