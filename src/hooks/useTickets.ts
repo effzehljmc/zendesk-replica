@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Ticket, Tag } from '@/types/ticket';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { onTicketCreated } from '@/lib/ticket-automation';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface TicketResponse {
   id: string;
@@ -32,16 +33,14 @@ export function useTickets() {
   const [error, setError] = useState<Error | null>(null);
   const { profile } = useAuth();
   const { isCustomer, loading: roleLoading } = useUserRole();
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     try {
-      // Don't fetch if we don't have the profile yet
-      if (!profile?.id) {
-        setTickets([]);
-        return;
-      }
+      setIsLoading(true);
+      setError(null);
 
-      let query = supabase
+      const query = supabase
         .from('tickets')
         .select(`
           *,
@@ -62,28 +61,21 @@ export function useTickets() {
               created_at
             )
           )
-        `);
+        `)
+        .order('created_at', { ascending: false });
 
-      // If user is a customer, only show their tickets
-      if (isCustomer && profile.id) {
-        query = query.eq('customer_id', profile.id);
+      if (isCustomer && profile?.id) {
+        query.eq('customer_id', profile.id);
       }
 
-      const { data, error } = await query
-        .order('priority', {
-          ascending: false,
-          foreignTable: undefined,
-          nullsFirst: false
-        })
-        .order('created_at', { ascending: false });
+      const { data, error } = await query;
 
       if (error) throw error;
 
-      // Transform the data to match the Ticket type
-      const transformedTickets = (data as TicketResponse[]).map(ticket => ({
+      const transformedTickets = data.map(ticket => ({
         ...ticket,
         ticket_number: parseInt(ticket.ticket_number, 10),
-        tags: ticket.tags?.map(t => t.tag) || []
+        tags: ticket.tags?.map((t: { tag: Tag }) => t.tag) || []
       })) as Ticket[];
 
       setTickets(transformedTickets);
@@ -94,16 +86,24 @@ export function useTickets() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [profile?.id, isCustomer]);
 
   useEffect(() => {
-    // Only fetch tickets when we have both profile and role information
+    console.log('Setting up tickets subscription');
+    
     if (!roleLoading) {
       fetchTickets();
     }
 
-    // Subscribe to realtime updates
-    const channel = supabase
+    // Clean up previous subscription if it exists
+    if (channelRef.current) {
+      console.log('Cleaning up previous tickets subscription');
+      channelRef.current.unsubscribe();
+      channelRef.current = null;
+    }
+
+    // Create new subscription
+    channelRef.current = supabase
       .channel('tickets_changes')
       .on(
         'postgres_changes',
@@ -111,9 +111,10 @@ export function useTickets() {
           event: '*',
           schema: 'public',
           table: 'tickets',
-          filter: isCustomer ? `customer_id=eq.${profile?.id}` : undefined
+          filter: isCustomer && profile?.id ? `customer_id=eq.${profile.id}` : undefined
         },
-        async (payload) => {
+        async (payload: RealtimePostgresChangesPayload<TicketResponse>) => {
+          console.log('Received ticket update:', payload.eventType);
           if (payload.eventType === 'INSERT') {
             const { data: newTicket } = await supabase
               .from('tickets')
@@ -152,15 +153,75 @@ export function useTickets() {
               // Call onTicketCreated for the new ticket
               await onTicketCreated(transformedTicket);
             }
+          } else if (payload.eventType === 'UPDATE') {
+            // Fetch the updated ticket to get the complete data
+            const { data: updatedTicket } = await supabase
+              .from('tickets')
+              .select(`
+                *,
+                customer:profiles!tickets_customer_id_fkey (
+                  full_name,
+                  email
+                ),
+                assigned_to:profiles!tickets_assigned_to_id_fkey (
+                  full_name
+                ),
+                tags:ticket_tags (
+                  tag:tags (
+                    id,
+                    name,
+                    color,
+                    usage_count,
+                    last_used_at,
+                    created_at
+                  )
+                )
+              `)
+              .eq('id', payload.new.id)
+              .single();
+
+            if (updatedTicket) {
+              const transformedTicket = {
+                ...updatedTicket,
+                ticket_number: parseInt(updatedTicket.ticket_number, 10),
+                tags: updatedTicket.tags?.map((t: { tag: Tag }) => t.tag) || []
+              } as Ticket;
+              
+              setTickets(current => 
+                current.map(ticket => 
+                  ticket.id === transformedTicket.id ? transformedTicket : ticket
+                )
+              );
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setTickets(current => 
+              current.filter(ticket => ticket.id !== payload.old.id)
+            );
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Tickets subscription status:', status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Error in tickets subscription');
+          // Attempt to resubscribe on error
+          setTimeout(() => {
+            if (channelRef.current) {
+              console.log('Attempting to resubscribe...');
+              channelRef.current.subscribe();
+            }
+          }, 1000);
+        }
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        console.log('Unmounting: Cleaning up tickets subscription');
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
+      }
     };
-  }, [profile?.id, isCustomer, roleLoading]);
+  }, [roleLoading, fetchTickets, isCustomer, profile?.id]);
 
   return {
     tickets,

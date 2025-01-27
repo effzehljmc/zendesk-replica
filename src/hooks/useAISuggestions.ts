@@ -1,6 +1,6 @@
 import { useSupabase } from '@/components/providers/supabase-provider';
 import { AIFeedback, AIMessageSuggestion } from '@/types/ai-suggestion';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 
 interface SuggestionState {
   suggestion: AIMessageSuggestion;
@@ -11,44 +11,47 @@ interface SuggestionState {
 export function useAISuggestions(ticketId: string) {
   const { supabase } = useSupabase();
   const [suggestions, setSuggestions] = useState<SuggestionState[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // Fetch initial suggestions
-  useEffect(() => {
-    const fetchSuggestions = async () => {
+  const fetchSuggestions = useCallback(async () => {
+    try {
       setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('ai_suggestions')
-          .select('*')
-          .eq('ticket_id', ticketId)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('ai_suggestions')
+        .select('*')
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: true });
 
-        if (error) {
-          console.error('Error fetching suggestions:', error);
-          return;
-        }
+      if (error) throw error;
 
-        setSuggestions(
-          data.map((suggestion) => ({
-            suggestion,
-            status: 'success' as const,
-          }))
-        );
-      } catch (error) {
-        console.error('Error in fetchSuggestions:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      setSuggestions(
+        data.map(suggestion => ({
+          suggestion,
+          status: 'success'
+        }))
+      );
+    } catch (err) {
+      console.error('Error fetching AI suggestions:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch AI suggestions'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [ticketId]);
 
-    fetchSuggestions();
-  }, [ticketId, supabase]);
-
-  // Subscribe to changes
   useEffect(() => {
-    const channel = supabase
+    console.log('Setting up AI suggestions subscription for ticket:', ticketId);
+    fetchSuggestions();
+
+    // Clean up previous subscription if it exists
+    if (channelRef.current) {
+      console.log('Cleaning up previous AI suggestions subscription for ticket:', ticketId);
+      channelRef.current.unsubscribe();
+    }
+
+    // Create new subscription
+    channelRef.current = supabase
       .channel(`ai_suggestions:${ticketId}`)
       .on(
         'postgres_changes',
@@ -56,13 +59,13 @@ export function useAISuggestions(ticketId: string) {
           event: '*',
           schema: 'public',
           table: 'ai_suggestions',
-          filter: `ticket_id=eq.${ticketId}`,
+          filter: `ticket_id=eq.${ticketId}`
         },
         async (payload) => {
+          console.log('Received AI suggestion update:', payload.eventType, 'for ticket:', ticketId);
           if (payload.eventType === 'INSERT') {
             const newSuggestion = payload.new as AIMessageSuggestion;
             setSuggestions(currentSuggestions => {
-              // Check if suggestion already exists
               const exists = currentSuggestions.some(s => s.suggestion.id === newSuggestion.id);
               if (exists) {
                 return currentSuggestions;
@@ -98,9 +101,13 @@ export function useAISuggestions(ticketId: string) {
       });
 
     return () => {
-      channel.unsubscribe();
+      if (channelRef.current) {
+        console.log('Unmounting: Cleaning up AI suggestions subscription for ticket:', ticketId);
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
+      }
     };
-  }, [ticketId, supabase]);
+  }, [ticketId, fetchSuggestions]);
 
   const triggerSuggestion = useCallback(async () => {
     setIsLoading(true);
@@ -168,6 +175,8 @@ export function useAISuggestions(ticketId: string) {
   return {
     suggestions,
     isLoading,
+    error,
+    refetch: fetchSuggestions,
     triggerSuggestion,
     acceptSuggestion,
     rejectSuggestion,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
@@ -79,49 +79,57 @@ export function useTicketMessages(ticketId: string) {
   const [error, setError] = useState<Error | null>(null);
   const { profile } = useAuth();
   const { toast } = useToast();
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  useEffect(() => {
+  const fetchMessages = useCallback(async () => {
     if (!profile?.id) {
       console.error('No profile ID available');
       return;
     }
 
-    const fetchMessages = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('ticket_messages')
-          .select(`
-            *,
-            profiles:user_id (
-              full_name,
-              email
-            ),
-            ticket_message_attachments (
-              id,
-              file_name,
-              file_size,
-              content_type,
-              storage_path
-            )
-          `)
-          .eq('ticket_id', ticketId)
-          .order('created_at', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('ticket_messages')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            email
+          ),
+          ticket_message_attachments (
+            id,
+            file_name,
+            file_size,
+            content_type,
+            storage_path
+          )
+        `)
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: true });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        console.log('Fetched messages:', data);
-        setMessages(data.map(transformMessage));
-      } catch (err) {
-        console.error('Error fetching messages:', err);
-        setError(err instanceof Error ? err : new Error('Failed to fetch messages'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      setMessages(data.map(transformMessage));
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch messages'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [ticketId, profile?.id]);
 
+  useEffect(() => {
+    console.log('Setting up ticket messages subscription for ticket:', ticketId);
     fetchMessages();
 
-    // Subscribe to changes
+    // Clean up previous subscription if it exists
+    if (channelRef.current) {
+      console.log('Cleaning up previous subscription for ticket:', ticketId);
+      channelRef.current.unsubscribe();
+      channelRef.current = null;
+    }
+
+    // Create new subscription with more specific configuration
     const channel = supabase
       .channel(`ticket_messages:${ticketId}`)
       .on(
@@ -133,31 +141,52 @@ export function useTicketMessages(ticketId: string) {
           filter: `ticket_id=eq.${ticketId}`
         },
         async (payload: RealtimePostgresChangesPayload<TicketMessageResponse>) => {
+          console.log('Received message update:', payload.eventType, 'for ticket:', ticketId, payload);
+          
           if (payload.eventType === 'INSERT') {
-            // First update UI with basic data
-            setMessages(currentMessages => {
-              // Check if message already exists
-              const messageExists = currentMessages.some(msg => msg.id === payload.new.id);
-              if (messageExists) return currentMessages;
+            try {
+              // Fetch the complete message data immediately
+              const { data: messageData, error: messageError } = await supabase
+                .from('ticket_messages')
+                .select(`
+                  *,
+                  profiles:user_id (
+                    full_name,
+                    email
+                  ),
+                  ticket_message_attachments (
+                    id,
+                    file_name,
+                    file_size,
+                    content_type,
+                    storage_path
+                  )
+                `)
+                .eq('id', payload.new.id)
+                .single();
 
-              // Transform the payload data directly
-              const newMessage = {
-                ...payload.new,
-                profiles: payload.new.profiles || {
-                  full_name: null,
-                  email: null
-                },
-                ticket_message_attachments: payload.new.ticket_message_attachments || []
-              };
+              if (messageError) {
+                console.error('Error fetching complete message data:', messageError);
+                return;
+              }
 
-              // Transform the message
-              const transformedMessage = transformMessage(newMessage);
-
-              // Add the new message to the list
-              return [...currentMessages, transformedMessage];
-            });
-
-            // Then fetch complete message data
+              if (messageData) {
+                const transformedMessage = transformMessage(messageData);
+                setMessages(currentMessages => {
+                  // Check if message already exists
+                  const exists = currentMessages.some(msg => msg.id === transformedMessage.id);
+                  if (exists) return currentMessages;
+                  return [...currentMessages, transformedMessage];
+                });
+              }
+            } catch (error) {
+              console.error('Error processing new message:', error);
+            }
+          } else if (payload.eventType === 'DELETE') {
+            setMessages(currentMessages => 
+              currentMessages.filter(message => message.id !== payload.old.id)
+            );
+          } else if (payload.eventType === 'UPDATE') {
             try {
               const { data: messageData, error: messageError } = await supabase
                 .from('ticket_messages')
@@ -178,32 +207,51 @@ export function useTicketMessages(ticketId: string) {
                 .eq('id', payload.new.id)
                 .single();
 
-              if (messageError) throw messageError;
+              if (messageError) {
+                console.error('Error fetching updated message data:', messageError);
+                return;
+              }
 
               if (messageData) {
-                // Update the message with complete data
+                const transformedMessage = transformMessage(messageData);
                 setMessages(currentMessages =>
                   currentMessages.map(msg =>
-                    msg.id === messageData.id ? transformMessage(messageData) : msg
+                    msg.id === transformedMessage.id ? transformedMessage : msg
                   )
                 );
               }
             } catch (error) {
-              console.error('Error fetching complete message data:', error);
+              console.error('Error processing updated message:', error);
             }
-          } else if (payload.eventType === 'DELETE') {
-            setMessages(currentMessages => 
-              currentMessages.filter(message => message.id !== payload.old.id)
-            );
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Subscription status for ticket ${ticketId}:`, status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to messages for ticket:', ticketId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error in messages subscription for ticket:', ticketId);
+          // Attempt to resubscribe on error
+          setTimeout(() => {
+            if (channelRef.current === channel) {
+              console.log('Attempting to resubscribe...');
+              channel.subscribe();
+            }
+          }, 1000);
+        }
+      });
+
+    channelRef.current = channel;
 
     return () => {
-      channel.unsubscribe();
+      console.log('Unmounting: Cleaning up subscription for ticket:', ticketId);
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
+      }
     };
-  }, [ticketId, profile?.id]);
+  }, [ticketId, fetchMessages]);
 
   const createMessage = async (data: CreateMessageData) => {
     if (!profile?.id) {
