@@ -18,16 +18,16 @@ frontend:
     - pattern: '**/assets/*.js'
       headers:
         - key: 'Content-Type'
-          value: 'application/javascript'
+          value: 'text/javascript'
     - pattern: '**/assets/*.css'
       headers:
         - key: 'Content-Type'
           value: 'text/css'
-    - pattern: '**/*.html'
+    - pattern: '**/assets/*.mjs'
       headers:
         - key: 'Content-Type'
-          value: 'text/html'
-    - pattern: '*.json'
+          value: 'text/javascript'
+    - pattern: '**/assets/*.cjs'
       headers:
         - key: 'Content-Type'
-          value: 'application/json; charset=utf-8' 
+          value: 'text/javascript' 
