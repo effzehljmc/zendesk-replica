@@ -15,19 +15,18 @@ frontend:
     paths:
       - .npm/**/*
   customHeaders:
-    - pattern: '**/assets/*.js'
+    - pattern: '/assets/*.js'
       headers:
         - key: 'Content-Type'
           value: 'text/javascript'
-    - pattern: '**/assets/*.css'
+    - pattern: '/assets/*.css'
       headers:
         - key: 'Content-Type'
           value: 'text/css'
-    - pattern: '**/assets/*.mjs'
-      headers:
-        - key: 'Content-Type'
-          value: 'text/javascript'
-    - pattern: '**/assets/*.cjs'
-      headers:
-        - key: 'Content-Type'
-          value: 'text/javascript' 
+  redirects:
+    - source: '/assets/*'
+      target: '/assets/:splat'
+      status: '200'
+    - source: '/*'
+      target: '/index.html'
+      status: '200' 
