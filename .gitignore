@@ -10,8 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-#*.local
-
+.env.local
+*.env
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -27,3 +27,4 @@ GauntletAI Project 2 - AutoCRM.md
 .gitignore
 docs/GauntletAI Project 2 - AutoCRM-2.md
 tsconfig.tsbuildinfo
+.env.local

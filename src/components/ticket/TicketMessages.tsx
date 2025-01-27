@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTicketMessages } from '@/hooks/useTicketMessages';
@@ -6,9 +6,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trash2 } from 'lucide-react';
 import { TicketMessage } from './TicketMessage';
-import { FileAttachment } from './FileAttachment';
+import { AISuggestions } from '../AISuggestions';
 import type { FileUploadResponse } from '@/lib/file-upload';
 import { createMessageAttachment } from '@/lib/ticket-attachments';
+import { supabase } from '@/lib/supabase';
+
+interface UserRole {
+  roles: {
+    name: string;
+  } | Array<{ name: string }>;
+}
 
 interface TicketMessagesProps {
   ticketId: string;
@@ -20,69 +27,123 @@ export function TicketMessages({ ticketId }: TicketMessagesProps) {
   const { messages, isLoading, createMessage, deleteMessage } = useTicketMessages(ticketId);
   const { profile } = useAuth();
 
+  // Check if user is an agent
+  const [isAgent, setIsAgent] = useState(false);
+  
+  // Get user role on mount
+  useEffect(() => {
+    const checkRole = async () => {
+      if (!profile?.id) return;
+      
+      const { data: userRoles, error } = await supabase
+        .from('user_roles')
+        .select('roles(name)')
+        .eq('user_id', profile.id);
+
+      if (error) {
+        console.error('Error fetching user roles:', error);
+        return;
+      }
+
+      // Check if any of the roles is 'agent' or 'admin'
+      const hasAgentOrAdminRole = (userRoles as UserRole[])?.some(role => {
+        // Handle both array and object role formats
+        const roleName = Array.isArray(role.roles)
+          ? role.roles[0]?.name
+          : (role.roles as { name: string })?.name;
+          
+        return roleName === 'agent' || roleName === 'admin';
+      }) ?? false;
+
+      setIsAgent(hasAgentOrAdminRole);
+    };
+    
+    checkRole();
+  }, [profile?.id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() && pendingAttachments.length === 0) return;
 
     try {
-      const message = await createMessage({
-        content: newMessage.trim(),
+      await createMessage({
+        content: newMessage.trim()
       });
-
-      // Create attachments for the new message
-      if (pendingAttachments.length > 0) {
-        await Promise.all(
-          pendingAttachments.map(attachment =>
-            createMessageAttachment(message.id, attachment)
-          )
-        );
-      }
 
       setNewMessage('');
       setPendingAttachments([]);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Failed to create message:', error);
     }
   };
 
-  const handleAttachmentUpload = async (messageId: string, attachment: FileUploadResponse) => {
-    // For new message composition, store attachments temporarily
-    if (!messageId) {
-      setPendingAttachments(current => [...current, attachment]);
-      return;
-    }
-
-    // For existing messages, create the attachment immediately
-    await createMessageAttachment(messageId, attachment);
-  };
-
-  const handleAttachmentDelete = async (messageId: string, attachmentId: string) => {
-    // For pending attachments in new message
-    if (!messageId) {
-      setPendingAttachments(current => 
-        current.filter(a => a.storagePath !== attachmentId)
-      );
-      return;
+  const handleFileUpload = async (files: FileList) => {
+    for (const file of Array.from(files)) {
+      try {
+        const uploadResponse = await createMessageAttachment(
+          messages[0].id,
+          file,
+          {
+            fileName: file.name,
+            fileSize: file.size,
+            contentType: file.type
+          }
+        );
+        setPendingAttachments(prev => [...prev, uploadResponse]);
+      } catch (error) {
+        console.error('Failed to upload file:', error);
+      }
     }
   };
 
-  const handleMessageDelete = async (messageId: string) => {
-    try {
-      await deleteMessage(messageId);
-    } catch (error) {
-      console.error('Failed to delete message:', error);
-    }
+  const handleRemoveAttachment = (index: number) => {
+    setPendingAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   if (isLoading) {
-    return <div className="space-y-4"><Skeleton className="h-32" /></div>;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Messages</h3>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4">
+        {messages.map((message) => (
+          <TicketMessage
+            key={message.id}
+            message={{
+              ...message,
+              createdAt: new Date(message.createdAt),
+              user: {
+                id: message.user?.id || 'unknown',
+                fullName: message.user?.fullName || 'Unknown',
+                email: message.user?.email || ''
+              }
+            }}
+            onAttachmentUpload={async (_, attachment) => {
+              // Handle attachment upload
+              console.log('Attachment uploaded:', attachment);
+            }}
+            onAttachmentDelete={async (_, attachmentId) => {
+              // Handle attachment deletion
+              console.log('Attachment deleted:', attachmentId);
+            }}
+            onMessageDelete={async (messageId) => {
+              await deleteMessage(messageId);
+            }}
+            isCurrentUser={message.user?.id === profile?.id}
+            isAgent={isAgent}
+          />
+        ))}
       </div>
+
+      {isAgent && (
+        <AISuggestions ticketId={ticketId} className="mt-4" />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Textarea
@@ -91,68 +152,50 @@ export function TicketMessages({ ticketId }: TicketMessagesProps) {
           placeholder="Type your message..."
           className="min-h-[100px]"
         />
-        
-        {/* Display pending attachments */}
-        {pendingAttachments.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground">Pending Attachments:</div>
-            <div className="space-y-2">
-              {pendingAttachments.map((attachment) => (
-                <div key={attachment.storagePath} className="flex items-center gap-2">
-                  <span className="text-sm">{attachment.fileName}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleAttachmentDelete('', attachment.storagePath)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="flex justify-between items-center">
-          <FileAttachment
-            ticketId={ticketId}
-            onFileUploaded={(fileData) => handleAttachmentUpload('', fileData)}
-          />
-          <Button 
-            type="submit" 
-            disabled={!newMessage.trim() && pendingAttachments.length === 0}
-          >
+          <div className="flex gap-2">
+            <input
+              type="file"
+              multiple
+              onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+              className="hidden"
+              id="file-upload"
+            />
+            <label
+              htmlFor="file-upload"
+              className="cursor-pointer bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Attach Files
+            </label>
+          </div>
+
+          <Button type="submit" disabled={!newMessage.trim() && pendingAttachments.length === 0}>
             Send Message
           </Button>
         </div>
-      </form>
 
-      <div className="space-y-4">
-        {messages.map((message) => (
-          <TicketMessage
-            key={message.id}
-            message={{
-              id: message.id,
-              content: message.content,
-              createdAt: new Date(message.createdAt),
-              user: {
-                id: message.userId,
-                fullName: message.user?.fullName ?? null,
-                email: message.user?.email ?? ''
-              },
-              attachments: message.attachments?.map(att => ({
-                ...att,
-                contentType: att.contentType || 'application/octet-stream'
-              }))
-            }}
-            ticketId={ticketId}
-            onAttachmentUpload={handleAttachmentUpload}
-            onAttachmentDelete={handleAttachmentDelete}
-            onMessageDelete={handleMessageDelete}
-            isCurrentUser={message.userId === profile?.id}
-          />
-        ))}
-      </div>
+        {pendingAttachments.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Attachments:</div>
+            {pendingAttachments.map((attachment, index) => (
+              <div key={index} className="flex items-center justify-between bg-secondary/20 p-2 rounded">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{attachment.fileName}</span>
+                </div>
+                <Button
+                  onClick={() => handleRemoveAttachment(index)}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </form>
     </div>
   );
-} 
+}
