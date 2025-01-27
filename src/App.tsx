@@ -21,6 +21,9 @@ import TicketDetailPage from '@/pages/tickets/[id]';
 import KnowledgeBase from '@/pages/kb';
 import KBArticle from '@/pages/kb/[id]';
 import KnowledgeBaseAdmin from '@/pages/admin/KnowledgeBase';
+import { TicketMessagesProvider } from '@/contexts/TicketMessagesContext';
+import { ThemeProvider } from 'next-themes';
+import SupabaseProvider from '@/components/providers/supabase-provider';
 
 // Enable future flags for React Router
 const router = {
@@ -42,60 +45,66 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router {...router}>
+    <ThemeProvider>
+      <SupabaseProvider>
         <AuthProvider>
-          <Routes>
-            {/* Public Routes - Outside of any protection */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
+          <TicketMessagesProvider>
+            <QueryClientProvider client={queryClient}>
+              <Toaster />
+              <Router {...router}>
+                <Routes>
+                  {/* Public Routes - Outside of any protection */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<SignUp />} />
 
-            {/* Protected Routes */}
-            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              {/* Dashboard Routes */}
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              
-              {/* Knowledge Base Routes */}
-              <Route path="/kb" element={<KnowledgeBase />} />
-              <Route path="/kb/:id" element={<KBArticle />} />
-              
-              {/* Analytics Route - Only for agents and admins */}
-              <Route
-                path="/analytics"
-                element={<RoleProtectedRoute roles={['admin', 'agent']}><Analytics /></RoleProtectedRoute>}
-              />
-              
-              {/* Admin Only Routes */}
-              <Route path="/admin" element={<RoleProtectedRoute roles={['admin']}><AdminLayout /></RoleProtectedRoute>}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="users" element={<AdminUsers />} />
-                <Route path="users/:id" element={<UserDetail />} />
-                <Route path="users/:id/edit" element={<UserEdit />} />
-                <Route path="settings" element={<AdminSettings />} />
-                <Route path="knowledge-base" element={<KnowledgeBaseAdmin />} />
-              </Route>
+                  {/* Protected Routes */}
+                  <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                    {/* Dashboard Routes */}
+                    <Route index element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    
+                    {/* Knowledge Base Routes */}
+                    <Route path="/kb" element={<KnowledgeBase />} />
+                    <Route path="/kb/:id" element={<KBArticle />} />
+                    
+                    {/* Analytics Route - Only for agents and admins */}
+                    <Route
+                      path="/analytics"
+                      element={<RoleProtectedRoute roles={['admin', 'agent']}><Analytics /></RoleProtectedRoute>}
+                    />
+                    
+                    {/* Admin Only Routes */}
+                    <Route path="/admin" element={<RoleProtectedRoute roles={['admin']}><AdminLayout /></RoleProtectedRoute>}>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="users" element={<AdminUsers />} />
+                      <Route path="users/:id" element={<UserDetail />} />
+                      <Route path="users/:id/edit" element={<UserEdit />} />
+                      <Route path="settings" element={<AdminSettings />} />
+                      <Route path="knowledge-base" element={<KnowledgeBaseAdmin />} />
+                    </Route>
 
-              {/* Ticket Routes */}
-              <Route
-                path="/tickets"
-                element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><TicketsPage /></RoleProtectedRoute>}
-              />
-              <Route
-                path="/tickets/create"
-                element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><CreateTicketPage /></RoleProtectedRoute>}
-              />
-              <Route
-                path="/tickets/:id"
-                element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><TicketDetailPage /></RoleProtectedRoute>}
-              />
-            </Route>
-            
-            </Routes>
-          <Toaster />
+                    {/* Ticket Routes */}
+                    <Route
+                      path="/tickets"
+                      element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><TicketsPage /></RoleProtectedRoute>}
+                    />
+                    <Route
+                      path="/tickets/create"
+                      element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><CreateTicketPage /></RoleProtectedRoute>}
+                    />
+                    <Route
+                      path="/tickets/:id"
+                      element={<RoleProtectedRoute roles={['admin', 'agent', 'customer']}><TicketDetailPage /></RoleProtectedRoute>}
+                    />
+                  </Route>
+                  
+                </Routes>
+              </Router>
+            </QueryClientProvider>
+          </TicketMessagesProvider>
         </AuthProvider>
-      </Router>
-    </QueryClientProvider>
+      </SupabaseProvider>
+    </ThemeProvider>
   );
 }
 

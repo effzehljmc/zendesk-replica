@@ -53,4 +53,45 @@ export interface UpdateTicketData {
   assigned_to_id?: string | null;
   tags?: string[];
   satisfaction_rating?: number;
+}
+
+export interface TicketMessage {
+  id: string;
+  content: string;
+  createdAt: Date;
+  userId: string;
+  user?: {
+    id: string;
+    fullName: string | null;
+    email: string | null;
+  };
+  attachments?: {
+    id: string;
+    fileName: string;
+    fileSize: number;
+    contentType: string;
+    storagePath: string;
+  }[];
+  messageType?: string;
+  isAIGenerated?: boolean;
+}
+
+export interface TicketMessageResponse {
+  id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  message_type: string;
+  is_ai_generated: boolean;
+  profiles?: {
+    full_name: string | null;
+    email: string | null;
+  };
+  ticket_message_attachments: {
+    id: string;
+    file_name: string;
+    file_size: number;
+    content_type: string;
+    storage_path: string;
+  }[];
 } 
