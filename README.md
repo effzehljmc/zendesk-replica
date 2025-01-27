@@ -108,32 +108,65 @@ The system automatically suggests relevant knowledge base articles to users when
   - Semantic search using OpenAI embeddings
   - Configurable match threshold and result limit
   - Real-time article matching
-- 🎯 AI Suggestions System
-  - Automated response suggestions
-  - Confidence scoring
-  - Metadata tracking for suggestions
+- 🎯 AI Message Suggestions System
+  - Automated response suggestions for new tickets and messages
+  - Real-time suggestion updates for all user roles
+  - Proper cleanup after suggestion acceptance
+  - Comprehensive error handling and logging
+  - Background data fetching for optimal performance
+  - Confidence scoring and feedback collection
   - System user for AI interactions
+  - Role-based access control for suggestions
 - 📊 AI Performance Monitoring
   - Suggestion acceptance tracking
   - Response time monitoring
   - Error rate tracking
+  - Real-time update performance metrics
+  - Role-based visibility tracking
 
 ### Technical Details
 
-#### Database Schema
-- Supabase PostgreSQL with Drizzle ORM
-- Role-based access control tables
-- Ticket management schema
-- Knowledge base articles
-- AI suggestions integration
-- Real-time messaging support
+#### Real-time Message Flow
+1. **Message Creation**
+   ```
+   User sends message → Store in DB → Real-time update → Instant UI update → Background data fetch
+   ```
 
-#### AI Integration
-- OpenAI API integration for embeddings
-- RAG (Retrieval Augmented Generation) pipeline
-- Suggestion storage and retrieval system
-- Confidence-based sorting
-- Proper error handling and security measures
+2. **AI Suggestion Flow**
+   ```
+   New message → Generate suggestion → Store in DB → Real-time update → Display to agents
+   ```
+
+3. **Suggestion Acceptance**
+   ```
+   Agent accepts → Create message → Update suggestion status → Remove suggestion UI → Real-time update
+   ```
+
+The system combines several components to provide real-time AI assistance:
+
+1. **Real-time Updates**
+   - Supabase Realtime subscriptions for instant updates
+   - Role-based visibility control through RLS
+   - Optimistic UI updates with background data fetching
+   - Proper error handling and fallback values
+
+2. **AI Suggestion System**
+   - OpenAI-powered response generation
+   - Real-time suggestion delivery to agents
+   - Proper cleanup after acceptance
+   - Comprehensive logging for debugging
+
+3. **Role-Based Access**
+   - Agents see all messages in real-time
+   - Customers see responses instantly
+   - RLS policies ensure proper data access
+   - Real-time updates respect user roles
+
+4. **Performance Optimizations**
+   - Immediate UI updates with basic data
+   - Background fetching of complete data
+   - Proper error handling and recovery
+   - Comprehensive logging for monitoring
 
 ## Tech Stack
 

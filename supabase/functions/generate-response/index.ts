@@ -51,7 +51,7 @@ serve(async (req) => {
     const { ticket } = await req.json() as RequestBody
 
     // System user ID (AI Assistant)
-    const systemUserId = '4c03221f-179d-4cfd-a62e-a4f68d9a5764'
+    const systemUserId = '2c47e898-947a-46df-96bf-5d537207fb39'
 
     // Get relevant articles using match_kb_articles
     const { data: articles, error: matchError } = await supabaseClient

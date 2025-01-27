@@ -1,40 +1,47 @@
 export interface AIMessageSuggestion {
   id: string;
-  ticketId: string;
-  content: string;
-  confidenceScore: number;
-  sourceKBArticles: string[];  // IDs of relevant KB articles used
-  status: 'pending' | 'accepted' | 'rejected';
-  createdAt: string;
-  updatedAt: string;
+  ticket_id: string;
+  suggested_response: string;
+  confidence_score: number;
+  system_user_id?: string;
   metadata?: {
-    relevanceScore?: number;
-    contextQuality?: number;
-    additionalInfo?: Record<string, any>;
+    used_articles?: string[];
+    model?: string;
+    temperature?: number;
+    additional_info?: Record<string, any>;
   };
+  status: 'pending' | 'accepted' | 'rejected';
+  feedback?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateAISuggestionData {
-  ticketId: string;
-  content: string;
-  confidenceScore: number;
-  sourceKBArticles: string[];
+  ticket_id: string;
+  suggested_response: string;
+  confidence_score: number;
+  system_user_id?: string;
   metadata?: {
-    relevanceScore?: number;
-    contextQuality?: number;
-    additionalInfo?: Record<string, any>;
+    used_articles?: string[];
+    model?: string;
+    temperature?: number;
+    additional_info?: Record<string, any>;
   };
 }
 
 export interface AIGenerationResponse {
-  success: boolean;
-  suggestion?: AIMessageSuggestion;
-  error?: string;
+  suggested_response: string;
+  confidence_score: number;
+  metadata: {
+    used_articles?: string[];
+    model: string;
+    temperature: number;
+  };
 }
 
 export interface AIFeedback {
-  suggestionId: string;
+  suggestion_id: string;
   status: 'accepted' | 'rejected';
   feedback?: string;
-  updatedAt: string;
+  updated_at: string;
 }

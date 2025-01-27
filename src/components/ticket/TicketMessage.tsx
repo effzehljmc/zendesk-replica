@@ -1,188 +1,168 @@
 import { useState } from 'react';
+import { Button } from '../ui/button';
+import { Card } from '../ui/card';
 import { FileAttachment } from './FileAttachment';
-import { createMessageAttachment } from '@/lib/ticket-attachments';
-import type { FileUploadResponse } from '@/lib/file-upload';
 import { useToast } from '@/components/ui/use-toast';
 import { Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { HelpMessage } from './HelpMessage';
-import { supabase } from '@/lib/supabase';
-
-interface MessageUser {
-  id: string;
-  fullName: string | null;
-  email: string;
-}
-
-interface MessageAttachment {
-  id: string;
-  fileName: string;
-  fileSize: number;
-  contentType: string;
-  storagePath: string;
-}
+import { createMessageAttachment } from '@/lib/ticket-attachments';
+import type { FileUploadResponse } from '@/lib/file-upload';
 
 interface TicketMessageProps {
   message: {
     id: string;
     content: string;
     createdAt: Date;
-    user: MessageUser;
-    attachments?: MessageAttachment[];
+    user: {
+      id: string;
+      fullName: string;
+      email: string;
+    };
+    attachments?: {
+      id: string;
+      fileName: string;
+      fileSize: number;
+      contentType: string;
+      storagePath: string;
+    }[];
   };
-  ticketId: string;
   onAttachmentUpload: (messageId: string, attachment: FileUploadResponse) => Promise<void>;
   onAttachmentDelete: (messageId: string, attachmentId: string) => Promise<void>;
   onMessageDelete: (messageId: string) => Promise<void>;
   isCurrentUser: boolean;
+  isAgent: boolean;
 }
 
 export function TicketMessage({
   message,
-  ticketId,
   onAttachmentUpload,
   onAttachmentDelete,
   onMessageDelete,
   isCurrentUser,
+  isAgent
 }: TicketMessageProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleAttachmentUpload = async (fileData: FileUploadResponse) => {
+  const handleFileUpload = async (file: File) => {
     try {
-      await createMessageAttachment(message.id, fileData);
-      onAttachmentUpload(message.id, fileData);
+      const fileData = {
+        fileName: file.name,
+        fileSize: file.size,
+        contentType: file.type
+      };
+      
+      const attachment = await createMessageAttachment(message.id, file, fileData);
+      await onAttachmentUpload(message.id, attachment);
+      
       toast({
-        title: 'Attachment added',
-        description: `Successfully added ${fileData.fileName} to the message`
+        title: 'File uploaded',
+        description: `Successfully uploaded ${file.name}`
       });
     } catch (error) {
+      console.error('Error uploading file:', error);
       toast({
-        title: 'Error adding attachment',
-        description: error instanceof Error ? error.message : 'Failed to add attachment',
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Failed to upload file',
         variant: 'destructive'
       });
     }
   };
 
-  const handleMessageDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this message?')) return;
-    setIsDeleting(true);
+  const handleDelete = async () => {
     try {
+      setIsDeleting(true);
       await onMessageDelete(message.id);
+      toast({
+        title: 'Message deleted',
+        description: 'Successfully deleted the message'
+      });
     } catch (error) {
-      console.error('Failed to delete message:', error);
+      console.error('Error deleting message:', error);
+      toast({
+        title: 'Delete failed',
+        description: error instanceof Error ? error.message : 'Failed to delete message',
+        variant: 'destructive'
+      });
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // Parse HelpMessage component if present
-  const renderMessageContent = (content: string) => {
-    const helpMessageMatch = content.match(/<HelpMessage.*?\/>/);
-    if (helpMessageMatch) {
-      const propsMatch = content.match(/ticketId="(.*?)" articleId="(.*?)" articleTitle="(.*?)"/);
-      if (propsMatch) {
-        const [_, ticketId, articleId, articleTitle] = propsMatch;
-        const parts = content.split(helpMessageMatch[0]);
-        return (
-          <>
-            {parts[0]}
-            <HelpMessage
-              ticketId={ticketId}
-              articleId={articleId}
-              articleTitle={articleTitle}
-            />
-            {parts[1]}
-          </>
-        );
-      }
+  const handleAttachmentDelete = async (attachmentId: string) => {
+    try {
+      await onAttachmentDelete(message.id, attachmentId);
+      toast({
+        title: 'Attachment deleted',
+        description: 'Successfully deleted the attachment'
+      });
+    } catch (error) {
+      console.error('Error deleting attachment:', error);
+      toast({
+        title: 'Delete failed',
+        description: error instanceof Error ? error.message : 'Failed to delete attachment',
+        variant: 'destructive'
+      });
     }
-    return content;
   };
 
   return (
     <Card className="p-4">
-      <div className="flex justify-between items-start mb-2">
+      <div className="flex items-start justify-between">
         <div>
-          <div className="font-medium">{message.user.fullName || message.user.email}</div>
+          <div className="font-medium">{message.user.fullName}</div>
           <div className="text-sm text-muted-foreground">
             {message.createdAt.toLocaleString()}
           </div>
         </div>
-        {isCurrentUser && (
+        {(isCurrentUser || isAgent) && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleMessageDelete}
+            onClick={handleDelete}
             disabled={isDeleting}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
       </div>
-      <div className="whitespace-pre-wrap">{renderMessageContent(message.content)}</div>
+
+      <div className="mt-2 whitespace-pre-wrap">{message.content}</div>
+
       {message.attachments && message.attachments.length > 0 && (
         <div className="mt-4 space-y-2">
-          {message.attachments.map((attachment) => {
-            const fileUrl = supabase.storage
-              .from('chat_attachments')
-              .getPublicUrl(attachment.storagePath)
-              .data.publicUrl;
-              
-            const handleDownload = async () => {
-              try {
-                const response = await fetch(fileUrl);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = attachment.fileName;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-              } catch (error) {
-                console.error('Download error:', error);
-              }
-            };
-              
-            return (
-              <div key={attachment.id} className="flex items-center gap-2">
+          {message.attachments.map((attachment) => (
+            <div
+              key={attachment.id}
+              className="flex items-center justify-between rounded-md border p-2"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{attachment.fileName}</span>
                 <span className="text-sm text-muted-foreground">
-                  {attachment.fileName}
+                  ({Math.round(attachment.fileSize / 1024)}KB)
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownload}
-                  className="ml-2"
-                >
-                  Download
-                </Button>
-                {isCurrentUser && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onAttachmentDelete(message.id, attachment.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
-            );
-          })}
+              {(isCurrentUser || isAgent) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAttachmentDelete(attachment.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          ))}
         </div>
       )}
-      {isCurrentUser && (
+
+      {(isCurrentUser || isAgent) && (
         <div className="mt-4">
           <FileAttachment
-            ticketId={ticketId}
-            onFileUploaded={handleAttachmentUpload}
+            onFileUploaded={handleFileUpload}
+            disabled={isDeleting}
           />
         </div>
       )}
     </Card>
   );
-} 
+}

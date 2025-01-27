@@ -142,23 +142,38 @@ export default function TicketDetailPage() {
           )}
         </div>
 
+        <div className="space-y-2">
+          <div className="text-sm text-muted-foreground">Priority</div>
+          <Select
+            value={ticket.priority}
+            onValueChange={handlePriorityChange}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <TicketNotes ticketId={ticket.id} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {canManageTicket && (
           <div className="space-y-2">
-            <div className="text-sm text-muted-foreground">Priority</div>
-            <Select
-              value={ticket.priority}
-              onValueChange={handlePriorityChange}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="text-sm text-muted-foreground">Tags</div>
+            <TagSelector
+              selectedTags={ticket.tags || []}
+              onTagsChange={handleTagsChange}
+              maxTags={3}
+            />
           </div>
         )}
 
@@ -189,17 +204,6 @@ export default function TicketDetailPage() {
       </div>
 
       <div className="space-y-6">
-        {canManageTicket && (
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground">Tags</div>
-            <TagSelector
-              selectedTags={ticket.tags || []}
-              onTagsChange={handleTagsChange}
-              maxTags={3}
-            />
-          </div>
-        )}
-
         <div className="space-y-2">
           <div className="text-sm text-muted-foreground">Customer</div>
           <div>{ticket.customer?.full_name} ({ticket.customer?.email})</div>
@@ -232,9 +236,6 @@ export default function TicketDetailPage() {
 
         <div className="border-t pt-6">
           <TicketMessages ticketId={ticket.id} />
-        </div>
-        <div className="border-t pt-6">
-          <TicketNotes ticketId={ticket.id} />
         </div>
       </div>
     </div>
