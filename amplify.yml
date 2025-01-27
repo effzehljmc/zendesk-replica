@@ -15,18 +15,18 @@ frontend:
     paths:
       - .npm/**/*
   customHeaders:
-    - pattern: '*.js'
+    - pattern: '**/assets/*.js'
       headers:
         - key: 'Content-Type'
-          value: 'application/javascript; charset=utf-8'
-    - pattern: '*.css'
+          value: 'application/javascript'
+    - pattern: '**/assets/*.css'
       headers:
         - key: 'Content-Type'
-          value: 'text/css; charset=utf-8'
-    - pattern: '*.html'
+          value: 'text/css'
+    - pattern: '**/*.html'
       headers:
         - key: 'Content-Type'
-          value: 'text/html; charset=utf-8'
+          value: 'text/html'
     - pattern: '*.json'
       headers:
         - key: 'Content-Type'
