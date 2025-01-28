@@ -45,7 +45,7 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <ThemeProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <SupabaseProvider>
         <AuthProvider>
           <TicketMessagesProvider>
