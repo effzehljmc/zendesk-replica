@@ -156,31 +156,16 @@ export function useAISuggestions(ticketId: string) {
   const storeFeedback = useCallback(
     async (feedback: AIFeedback) => {
       if (!user?.id) {
-        throw new Error('No user ID available');
+        // Wait for user data to be available
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (!user?.id) {
+          throw new Error('No user ID available');
+        }
       }
 
       const now = new Date().toISOString();
-      const { error: feedbackError } = await supabase
-        .from('ai_feedback_events')
-        .insert({
-          suggestion_id: feedback.suggestion_id,
-          ticket_id: feedback.ticket_id,
-          agent_id: user.id,
-          feedback_type: feedback.feedback_type,
-          feedback_reason: feedback.feedback_reason,
-          agent_response: feedback.agent_response,
-          additional_feedback: feedback.additional_feedback,
-          time_to_feedback: now, // Calculate time since suggestion creation
-          created_at: now,
-          updated_at: now
-        });
-
-      if (feedbackError) {
-        console.error('Error storing feedback event:', feedbackError);
-        throw feedbackError;
-      }
-
-      // Also update the suggestion status
+      
+      // First update the suggestion status
       const { error: suggestionError } = await supabase
         .from('ai_suggestions')
         .update({
@@ -192,6 +177,27 @@ export function useAISuggestions(ticketId: string) {
       if (suggestionError) {
         console.error('Error updating suggestion status:', suggestionError);
         throw suggestionError;
+      }
+
+      // Then store the feedback
+      const { error: feedbackError } = await supabase
+        .from('ai_feedback_events')
+        .insert({
+          suggestion_id: feedback.suggestion_id,
+          ticket_id: feedback.ticket_id,
+          agent_id: user.id,
+          feedback_type: feedback.feedback_type,
+          feedback_reason: feedback.feedback_reason || null,
+          agent_response: feedback.agent_response || null,
+          time_to_feedback: '0 seconds', // Default interval value
+          metadata: feedback.metadata || {},
+          created_at: now,
+          updated_at: now
+        });
+
+      if (feedbackError) {
+        console.error('Error storing feedback event:', feedbackError);
+        throw feedbackError;
       }
     },
     [supabase, user?.id]
@@ -225,35 +231,18 @@ export function useAISuggestions(ticketId: string) {
         ticket_id: ticketId,
         feedback_type: 'rejection',
         feedback_reason: reason as AIFeedback['feedback_reason'],
-        additional_feedback: additionalFeedback,
+        metadata: additionalFeedback ? { additional_feedback: additionalFeedback } : undefined,
         updated_at: now
       };
 
       try {
-        // First update the suggestion status
-        const { error: updateError } = await supabase
-          .from('ai_suggestions')
-          .update({
-            status: 'rejected',
-            updated_at: now
-          })
-          .eq('id', suggestion_id);
-
-        if (updateError) throw updateError;
-
-        // Then store the feedback
         await storeFeedback(feedback);
-
-        // Remove the suggestion from local state immediately
-        setSuggestions(currentSuggestions => 
-          currentSuggestions.filter(s => s.suggestion.id !== suggestion_id)
-        );
       } catch (error) {
         console.error('Error rejecting suggestion:', error);
         throw error;
       }
     },
-    [ticketId, storeFeedback, supabase]
+    [ticketId, storeFeedback]
   );
 
   return {

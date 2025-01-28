@@ -72,7 +72,6 @@ export interface TicketMessage {
     contentType: string;
     storagePath: string;
   }[];
-  messageType?: string;
   isAIGenerated?: boolean;
 }
 
@@ -81,7 +80,6 @@ export interface TicketMessageResponse {
   content: string;
   created_at: string;
   user_id: string;
-  message_type: string;
   is_ai_generated: boolean;
   profiles?: {
     full_name: string | null;

@@ -48,7 +48,6 @@ export interface AIFeedback {
   feedback_type: FeedbackType;
   feedback_reason?: FeedbackReason;
   agent_response?: string;
-  additional_feedback?: string;
   time_to_feedback?: string;
   metadata?: Record<string, any>;
   updated_at: string;

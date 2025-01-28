@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -10,11 +10,22 @@ interface CreateMessageData {
   isAIGenerated?: boolean;
 }
 
+interface MessagesState {
+  messages: TicketMessage[];
+  isLoading: boolean;
+  error: Error | null;
+}
+
 export function useTicketMessages(ticketId: string) {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { getTicketMessages, addMessage, deleteMessage: ctxDeleteMessage } = useTicketMessagesContext();
-  const { messages, isLoading, error } = getTicketMessages(ticketId);
+  const [messagesState, setMessagesState] = useState<MessagesState>({ messages: [], isLoading: true, error: null });
+
+  useEffect(() => {
+    const result = getTicketMessages(ticketId);
+    setMessagesState(result);
+  }, [ticketId, getTicketMessages]);
 
   const createMessage = useCallback(async (data: CreateMessageData) => {
     if (!profile?.id) {
@@ -63,7 +74,6 @@ export function useTicketMessages(ticketId: string) {
         content: newMessage.content,
         createdAt: new Date(newMessage.created_at),
         userId: newMessage.user_id,
-        messageType: newMessage.message_type,
         isAIGenerated: newMessage.is_ai_generated,
         user: {
           id: newMessage.user_id,
@@ -138,9 +148,9 @@ export function useTicketMessages(ticketId: string) {
   }, [ticketId, ctxDeleteMessage, toast]);
 
   return {
-    messages,
-    isLoading,
-    error,
+    messages: messagesState.messages,
+    isLoading: messagesState.isLoading,
+    error: messagesState.error,
     createMessage,
     deleteMessage
   };

@@ -14,9 +14,19 @@ export function useUser() {
 
   const fetchUser = useCallback(async () => {
     try {
+      // First get the authenticated user
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        setUser(null);
+        return;
+      }
+
+      // Then get the profile
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('id, email')
+        .eq('auth_user_id', authUser.id)
         .single();
 
       if (error) throw error;
