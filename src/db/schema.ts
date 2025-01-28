@@ -130,6 +130,20 @@ export const aiSuggestions = pgTable('ai_suggestions', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+export const aiFeedbackEvents = pgTable('ai_feedback_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  suggestionId: uuid('suggestion_id').notNull().references(() => aiSuggestions.id),
+  ticketId: uuid('ticket_id').notNull().references(() => tickets.id),
+  agentId: uuid('agent_id').notNull().references(() => profiles.id),
+  feedbackType: text('feedback_type').notNull(),
+  agentResponse: text('agent_response'),
+  feedbackReason: text('feedback_reason'),
+  timeToFeedback: text('time_to_feedback'), // interval type mapped to text
+  metadata: jsonb('metadata').default('{}'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   userRoles: many(userRoles),
@@ -223,9 +237,25 @@ export const ticketMessageAttachmentsRelations = relations(ticketMessageAttachme
   })
 }));
 
-export const aiSuggestionsRelations = relations(aiSuggestions, ({ one }) => ({
+export const aiSuggestionsRelations = relations(aiSuggestions, ({ one, many }) => ({
   ticket: one(tickets, {
     fields: [aiSuggestions.ticketId],
     references: [tickets.id]
+  }),
+  feedbackEvents: many(aiFeedbackEvents)
+}));
+
+export const aiFeedbackEventsRelations = relations(aiFeedbackEvents, ({ one }) => ({
+  suggestion: one(aiSuggestions, {
+    fields: [aiFeedbackEvents.suggestionId],
+    references: [aiSuggestions.id]
+  }),
+  ticket: one(tickets, {
+    fields: [aiFeedbackEvents.ticketId],
+    references: [tickets.id]
+  }),
+  agent: one(profiles, {
+    fields: [aiFeedbackEvents.agentId],
+    references: [profiles.id]
   })
 }));

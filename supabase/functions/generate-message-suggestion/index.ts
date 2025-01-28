@@ -10,6 +10,7 @@ const corsHeaders = {
 interface RequestBody {
   ticket_id: string
   message_id: string
+  suggestion_id: string
   system_user_id: string
 }
 
@@ -40,9 +41,9 @@ serve(async (req) => {
       throw new Error('OpenAI API key not found')
     }
 
-    const { ticket_id, message_id, system_user_id }: RequestBody = await req.json()
+    const { ticket_id, message_id, suggestion_id, system_user_id }: RequestBody = await req.json()
 
-    console.log('Processing message:', { ticket_id, message_id, system_user_id })
+    console.log('Processing message:', { ticket_id, message_id, suggestion_id, system_user_id })
 
     // Get ticket details and message history
     const { data: ticket, error: ticketError } = await supabaseClient
@@ -105,29 +106,26 @@ Provide a concise, professional, and helpful response that addresses the custome
       throw new Error('No suggestion generated')
     }
 
-    // Store the suggestion
+    // Update the existing suggestion instead of creating a new one
     const { data: suggestion, error: suggestionError } = await supabaseClient
-      .from('ai_suggestions')
-      .insert({
-        ticket_id,
-        suggested_response: suggestedResponse,
-        confidence_score: 0.9,
-        system_user_id,
-        metadata: {
+      .rpc('update_ai_suggestion', {
+        p_suggestion_id: suggestion_id,
+        p_suggested_response: suggestedResponse,
+        p_confidence_score: 0.9,
+        p_metadata: {
           message_id,
           model: 'gpt-4',
           prompt,
-        },
+        }
       })
-      .select()
       .single()
 
     if (suggestionError) {
-      console.error('Error storing suggestion:', suggestionError)
+      console.error('Error updating suggestion:', suggestionError)
       throw suggestionError
     }
 
-    console.log('Suggestion stored successfully:', suggestion.id)
+    console.log('Suggestion updated successfully:', suggestion.id)
 
     return new Response(JSON.stringify(suggestion), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -71,11 +71,15 @@ async function checkForKBMatch(ticket: Ticket) {
 async function createAutomatedKBMessage(ticketId: string, kbArticle: KBArticle & { similarity: number }) {
   console.log('💬 Creating automated message for ticket:', ticketId);
   
-  const content = `
-👋 I found a help article that might solve your problem:
-
-<HelpMessage ticketId="${ticketId}" articleId="${kbArticle.id}" articleTitle="${kbArticle.title}" />
-`;
+  // Store help message data as JSON
+  const content = JSON.stringify({
+    type: 'help_message',
+    data: {
+      ticketId,
+      articleId: kbArticle.id,
+      articleTitle: kbArticle.title
+    }
+  });
 
   try {
     const systemUserId = import.meta.env.VITE_SYSTEM_USER_ID;

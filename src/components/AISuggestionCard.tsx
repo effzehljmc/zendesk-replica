@@ -7,13 +7,14 @@ import { ChevronDown, ChevronUp, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
+import { FeedbackForm } from './ai-suggestion/feedback-form';
 
 interface AISuggestionCardProps {
   suggestion: AIMessageSuggestion;
   status: 'loading' | 'success' | 'error';
   error?: string;
   onAccept: (text: string) => void;
-  onReject: (feedback?: string) => void;
+  onReject: (reason: string, additionalFeedback?: string) => void;
   className?: string;
 }
 
@@ -29,7 +30,6 @@ export function AISuggestionCard({
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(suggestion.suggested_response);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [feedback, setFeedback] = useState('');
 
   const handleAccept = () => {
     if (isEditing) {
@@ -40,14 +40,9 @@ export function AISuggestionCard({
     }
   };
 
-  const handleReject = () => {
-    if (showFeedback) {
-      onReject(feedback);
-      setShowFeedback(false);
-      setFeedback('');
-    } else {
-      setShowFeedback(true);
-    }
+  const handleReject = (feedback: { reason: string; additionalFeedback?: string }) => {
+    onReject(feedback.reason, feedback.additionalFeedback);
+    setShowFeedback(false);
   };
 
   return (
@@ -105,11 +100,9 @@ export function AISuggestionCard({
 
             {showFeedback && (
               <div className="mt-4">
-                <Textarea
-                  placeholder="Why are you rejecting this suggestion? (Optional)"
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  className="mb-2"
+                <FeedbackForm
+                  onSubmit={handleReject}
+                  onCancel={() => setShowFeedback(false)}
                 />
               </div>
             )}
@@ -119,7 +112,7 @@ export function AISuggestionCard({
             {!showFeedback && (
               <Button
                 variant="outline"
-                onClick={handleReject}
+                onClick={() => setShowFeedback(true)}
                 disabled={status === 'loading'}
                 className="gap-2"
               >
@@ -128,22 +121,7 @@ export function AISuggestionCard({
               </Button>
             )}
             
-            {showFeedback ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowFeedback(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleReject}
-                >
-                  Submit Feedback
-                </Button>
-              </>
-            ) : (
+            {!showFeedback && (
               <Button
                 onClick={handleAccept}
                 disabled={status === 'loading'}

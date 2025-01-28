@@ -19,7 +19,6 @@ import type { Tag } from "@/types/ticket";
 import { useUserRole } from "@/hooks/useUserRole";
 import { SuggestedArticles } from "@/components/ticket/SuggestedArticles";
 import type { KBArticle } from "@/lib/kb";
-import { onTicketCreated } from "@/lib/ticket-automation";
 
 export default function CreateTicketPage() {
   const navigate = useNavigate();
@@ -46,16 +45,24 @@ export default function CreateTicketPage() {
 
     setIsSubmitting(true);
     try {
-      // First create the ticket
-      const { data: ticket, error: ticketError } = await supabase
+      // First create the ticket without selecting
+      const { data: newTicket, error: insertError } = await supabase
         .from("tickets")
         .insert({
           title,
           description,
-          priority: isCustomer ? "medium" : priority, // Default to medium for customers
+          priority: isCustomer ? "medium" : priority,
           status: "new",
           customer_id: profile.id,
         })
+        .select('id')
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Then fetch the complete ticket with relationships
+      const { data: ticket, error: fetchError } = await supabase
+        .from("tickets")
         .select(`
           *,
           customer:profiles!tickets_customer_id_fkey (
@@ -66,9 +73,10 @@ export default function CreateTicketPage() {
             full_name
           )
         `)
+        .eq('id', newTicket.id)
         .single();
 
-      if (ticketError) throw ticketError;
+      if (fetchError) throw fetchError;
 
       // Then create the ticket-tag relationships if tags are provided and user is not a customer
       if (!isCustomer && selectedTags.length > 0) {
@@ -84,17 +92,6 @@ export default function CreateTicketPage() {
 
         if (tagError) throw tagError;
       }
-
-      // Transform ticket to match Ticket type
-      const transformedTicket = {
-        ...ticket,
-        ticket_number: parseInt(ticket.ticket_number, 10),
-        tags: [],
-        firstResponseAt: null
-      };
-
-      // Call onTicketCreated directly
-      await onTicketCreated(transformedTicket);
 
       toast({
         title: "Success",

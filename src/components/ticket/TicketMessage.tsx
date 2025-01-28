@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Trash2 } from 'lucide-react';
 import { createMessageAttachment } from '@/lib/ticket-attachments';
 import type { FileUploadResponse } from '@/lib/file-upload';
+import { HelpMessage } from './HelpMessage';
 
 interface TicketMessageProps {
   message: {
@@ -105,6 +106,25 @@ export function TicketMessage({
     }
   };
 
+  // Parse message content to check if it's a help message
+  const renderMessageContent = () => {
+    try {
+      const parsedContent = JSON.parse(message.content);
+      if (parsedContent.type === 'help_message') {
+        return (
+          <HelpMessage
+            ticketId={parsedContent.data.ticketId}
+            articleId={parsedContent.data.articleId}
+            articleTitle={parsedContent.data.articleTitle}
+          />
+        );
+      }
+    } catch (e) {
+      // If parsing fails, treat as regular message
+      }
+      return <div className="mt-2 whitespace-pre-wrap">{message.content}</div>;
+  };
+
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between">
@@ -126,7 +146,7 @@ export function TicketMessage({
         )}
       </div>
 
-      <div className="mt-2 whitespace-pre-wrap">{message.content}</div>
+      {renderMessageContent()}
 
       {message.attachments && message.attachments.length > 0 && (
         <div className="mt-4 space-y-2">

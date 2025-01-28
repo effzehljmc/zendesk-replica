@@ -1,8 +1,10 @@
 import { useSupabase } from '@/components/providers/supabase-provider';
 import { AIFeedback, AIMessageSuggestion } from '@/types/ai-suggestion';
 import { useCallback, useEffect, useState, useRef } from 'react';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useUser } from '@/hooks/useUser';
 
-interface SuggestionState {
+export interface SuggestionState {
   suggestion: AIMessageSuggestion;
   status: 'loading' | 'success' | 'error';
   error?: string;
@@ -10,6 +12,8 @@ interface SuggestionState {
 
 export function useAISuggestions(ticketId: string) {
   const { supabase } = useSupabase();
+  const { isAdmin, isAgent } = useUserRole();
+  const { user } = useUser();
   const [suggestions, setSuggestions] = useState<SuggestionState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -18,11 +22,20 @@ export function useAISuggestions(ticketId: string) {
   const fetchSuggestions = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
+      console.log('Fetching suggestions with auth state:', { isAdmin, isAgent });
+      
+      const { data, error, count } = await supabase
         .from('ai_suggestions')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
+
+      console.log('Fetch result:', { 
+        success: !error, 
+        count, 
+        error: error?.message,
+        data: data?.length
+      });
 
       if (error) throw error;
 
@@ -38,7 +51,7 @@ export function useAISuggestions(ticketId: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [ticketId]);
+  }, [ticketId, isAdmin, isAgent]);
 
   useEffect(() => {
     console.log('Setting up AI suggestions subscription for ticket:', ticketId);
@@ -80,13 +93,19 @@ export function useAISuggestions(ticketId: string) {
               currentSuggestions.filter(s => s.suggestion.id !== payload.old.id)
             );
           } else if (payload.eventType === 'UPDATE') {
-            setSuggestions(currentSuggestions =>
-              currentSuggestions.map(s => 
-                s.suggestion.id === payload.new.id 
-                  ? { ...s, suggestion: payload.new as AIMessageSuggestion }
+            const updatedSuggestion = payload.new as AIMessageSuggestion;
+            setSuggestions(currentSuggestions => {
+              // If suggestion is accepted or rejected, remove it from the list
+              if (updatedSuggestion.status === 'accepted' || updatedSuggestion.status === 'rejected') {
+                return currentSuggestions.filter(s => s.suggestion.id !== updatedSuggestion.id);
+              }
+              // Otherwise update it
+              return currentSuggestions.map(s => 
+                s.suggestion.id === updatedSuggestion.id 
+                  ? { ...s, suggestion: updatedSuggestion }
                   : s
-              )
-            );
+              );
+            });
           }
         }
       )
@@ -134,42 +153,107 @@ export function useAISuggestions(ticketId: string) {
     }
   }, [ticketId]);
 
-  const acceptSuggestion = useCallback(
-    async (suggestion_id: string, status: 'accepted' | 'rejected' = 'accepted', feedback?: string) => {
-      const feedback_data: AIFeedback = {
-        suggestion_id,
-        status,
-        feedback,
-        updated_at: new Date().toISOString(),
-      };
+  const storeFeedback = useCallback(
+    async (feedback: AIFeedback) => {
+      if (!user?.id) {
+        throw new Error('No user ID available');
+      }
 
-      const { error } = await supabase
+      const now = new Date().toISOString();
+      const { error: feedbackError } = await supabase
+        .from('ai_feedback_events')
+        .insert({
+          suggestion_id: feedback.suggestion_id,
+          ticket_id: feedback.ticket_id,
+          agent_id: user.id,
+          feedback_type: feedback.feedback_type,
+          feedback_reason: feedback.feedback_reason,
+          agent_response: feedback.agent_response,
+          additional_feedback: feedback.additional_feedback,
+          time_to_feedback: now, // Calculate time since suggestion creation
+          created_at: now,
+          updated_at: now
+        });
+
+      if (feedbackError) {
+        console.error('Error storing feedback event:', feedbackError);
+        throw feedbackError;
+      }
+
+      // Also update the suggestion status
+      const { error: suggestionError } = await supabase
         .from('ai_suggestions')
         .update({
-          status,
-          feedback: feedback_data.feedback,
-          updated_at: feedback_data.updated_at,
+          status: feedback.feedback_type === 'approval' ? 'accepted' : 'rejected',
+          updated_at: now,
         })
-        .eq('id', suggestion_id);
+        .eq('id', feedback.suggestion_id);
 
-      if (error) {
-        console.error('Error updating suggestion:', error);
-        throw error;
+      if (suggestionError) {
+        console.error('Error updating suggestion status:', suggestionError);
+        throw suggestionError;
       }
+    },
+    [supabase, user?.id]
+  );
+
+  const acceptSuggestion = useCallback(
+    async (suggestion_id: string) => {
+      const now = new Date().toISOString();
+      const feedback: AIFeedback = {
+        suggestion_id,
+        ticket_id: ticketId,
+        feedback_type: 'approval',
+        updated_at: now
+      };
+
+      await storeFeedback(feedback);
 
       // Remove the suggestion from local state immediately
       setSuggestions(currentSuggestions => 
         currentSuggestions.filter(s => s.suggestion.id !== suggestion_id)
       );
     },
-    [supabase]
+    [ticketId, storeFeedback]
   );
 
   const rejectSuggestion = useCallback(
-    async (suggestion_id: string, feedback?: string) => {
-      return acceptSuggestion(suggestion_id, 'rejected', feedback);
+    async (suggestion_id: string, reason: string, additionalFeedback?: string) => {
+      const now = new Date().toISOString();
+      const feedback: AIFeedback = {
+        suggestion_id,
+        ticket_id: ticketId,
+        feedback_type: 'rejection',
+        feedback_reason: reason as AIFeedback['feedback_reason'],
+        additional_feedback: additionalFeedback,
+        updated_at: now
+      };
+
+      try {
+        // First update the suggestion status
+        const { error: updateError } = await supabase
+          .from('ai_suggestions')
+          .update({
+            status: 'rejected',
+            updated_at: now
+          })
+          .eq('id', suggestion_id);
+
+        if (updateError) throw updateError;
+
+        // Then store the feedback
+        await storeFeedback(feedback);
+
+        // Remove the suggestion from local state immediately
+        setSuggestions(currentSuggestions => 
+          currentSuggestions.filter(s => s.suggestion.id !== suggestion_id)
+        );
+      } catch (error) {
+        console.error('Error rejecting suggestion:', error);
+        throw error;
+      }
     },
-    [acceptSuggestion]
+    [ticketId, storeFeedback, supabase]
   );
 
   return {

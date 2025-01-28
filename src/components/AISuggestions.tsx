@@ -10,7 +10,7 @@ interface AISuggestionsProps {
 
 export function AISuggestions({ ticketId, className }: AISuggestionsProps) {
   console.log('Mounting AISuggestions component for ticket:', ticketId);
-  const { suggestions, acceptSuggestion } = useAISuggestions(ticketId);
+  const { suggestions, acceptSuggestion, rejectSuggestion } = useAISuggestions(ticketId);
   const { createMessage } = useTicketMessages(ticketId);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export function AISuggestions({ ticketId, className }: AISuggestionsProps) {
   const handleReject = async (suggestionId: string, feedback?: string) => {
     try {
       // Store feedback and mark as rejected
-      await acceptSuggestion(suggestionId, 'rejected', feedback);
+      await rejectSuggestion(suggestionId, 'irrelevant', feedback);
     } catch (error) {
       console.error('Failed to reject suggestion:', error);
     }

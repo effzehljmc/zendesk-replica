@@ -68,8 +68,8 @@ export async function updateAISuggestionFeedback(feedback: AIFeedback): Promise<
   const { error } = await supabase
     .from('ai_suggestions')
     .update({
-      status: feedback.status,
-      feedback: feedback.feedback,
+      status: feedback.feedback_type === 'approval' ? 'accepted' : 'rejected',
+      feedback: feedback.additional_feedback,
       updated_at: feedback.updated_at
     })
     .eq('id', feedback.suggestion_id);

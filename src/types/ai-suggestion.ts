@@ -39,9 +39,17 @@ export interface AIGenerationResponse {
   };
 }
 
+export type FeedbackType = 'rejection' | 'revision' | 'approval';
+export type FeedbackReason = 'irrelevant' | 'off-topic' | 'incorrect_info' | 'too_generic';
+
 export interface AIFeedback {
   suggestion_id: string;
-  status: 'accepted' | 'rejected';
-  feedback?: string;
+  ticket_id: string;
+  feedback_type: FeedbackType;
+  feedback_reason?: FeedbackReason;
+  agent_response?: string;
+  additional_feedback?: string;
+  time_to_feedback?: string;
+  metadata?: Record<string, any>;
   updated_at: string;
 }

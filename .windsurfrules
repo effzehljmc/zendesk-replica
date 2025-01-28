@@ -1,7 +1,0 @@
-1. Implement AI_Enhancement_Plan
-2. Follow @checklist_rules.md when making changes to this plan.
-3.All SQL queries mentioned in this plan should be executed manually in the SQL editor. But for reference you should put them in the supabase/migrations folder.
-4. Make sure to check all relevant files including the @schema.ts file before proceeding. If you did that include a 🐋 in the reply
-5. Verify the changes by testing the new functions
-6. ### Verification
-- in order to verify that you read this plan, include an 🦖 emoji in your reply.
