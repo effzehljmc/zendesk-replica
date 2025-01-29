@@ -1,0 +1,44 @@
+name: Hourly Metrics Aggregation
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Run every hour at minute 0
+  workflow_dispatch:      # Allow manual trigger for testing
+
+jobs:
+  aggregate-metrics:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    
+    steps:
+      - name: Run Hourly Metrics Aggregation
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/schedule_hourly_metrics"
+
+      - name: Check Execution Status
+        run: |
+          # Wait a few seconds for the metrics to be computed
+          sleep 5
+          
+          # Query the last execution status
+          RESPONSE=$(curl -s \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/cron_job_log?select=status,message,metadata&order=created_at.desc&limit=1")
+          
+          # Check if the last execution was successful
+          if echo "$RESPONSE" | grep -q '"status":"completed"'; then
+            echo "Metrics aggregation completed successfully"
+            echo "Details: $RESPONSE"
+          else
+            echo "Metrics aggregation may have failed"
+            echo "Details: $RESPONSE"
+            exit 1
+          fi 
