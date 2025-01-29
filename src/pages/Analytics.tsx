@@ -5,6 +5,7 @@ import { useAgentStats } from "@/hooks/useAgentStats";
 import { TicketStatusChart } from "@/components/dashboard/TicketStatusChart";
 import { AgentPerformance } from "@/components/dashboard/AgentPerformance";
 import { SatisfactionTrend } from "@/components/analytics/SatisfactionTrend";
+import { DailyMetricsCard } from "@/components/analytics/DailyMetricsCard";
 import {
   LineChart,
   Line,
@@ -16,6 +17,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 export function Analytics() {
   const { profile } = useAuth();
@@ -28,17 +30,17 @@ export function Analytics() {
   // Select the appropriate stats based on role
   const { stats, loading, error } = isAdmin ? adminStatsResult : agentStatsResult;
 
-  // Add logging for debugging
-  console.log('Analytics Data:', {
-    isAdmin,
-    loading,
-    error,
-    ticketStats: stats?.ticketStats,
-    recentTickets: stats?.recentTickets,
-    agentStats: isAdmin && stats && 'agentStats' in stats ? stats.agentStats : undefined,
-    thirtyDaysAgo: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
-    now: new Date().toISOString(),
-  });
+  // Debug logging
+  useEffect(() => {
+    if (stats?.recentTickets) {
+      console.log('Chart Data:', {
+        recentTickets: stats.recentTickets,
+        firstDate: stats.recentTickets[0]?.date,
+        lastDate: stats.recentTickets[stats.recentTickets.length - 1]?.date,
+        ticketCount: stats.recentTickets.length,
+      });
+    }
+  }, [stats?.recentTickets]);
 
   if (error) {
     return (
@@ -62,7 +64,12 @@ export function Analytics() {
           <Skeleton className="h-[400px]" />
           <Skeleton className="h-[400px]" />
           <Skeleton className="h-[400px]" />
-          {isAdmin && <Skeleton className="h-[400px]" />}
+          {isAdmin && (
+            <>
+              <Skeleton className="h-[400px]" />
+              <Skeleton className="h-[400px]" />
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -75,13 +82,6 @@ export function Analytics() {
                 {isAdmin ? "Ticket Activity (Last 30 Days)" : "My Ticket Activity (Last 30 Days)"}
               </h3>
               <div className="h-[300px]">
-                {/* Add logging before rendering chart */}
-                <>{console.log('Chart Data:', {
-                  recentTickets: stats.recentTickets,
-                  firstDate: stats.recentTickets[0]?.date,
-                  lastDate: stats.recentTickets[stats.recentTickets.length - 1]?.date,
-                  ticketCount: stats.recentTickets.length,
-                })}</>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={stats.recentTickets}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -99,7 +99,6 @@ export function Analytics() {
                     <YAxis />
                     <Tooltip 
                       labelFormatter={(date: string) => {
-                        // Use same date formatting for tooltip
                         const localDate = new Date(date + 'T00:00:00');
                         return localDate.toLocaleDateString();
                       }}
@@ -128,8 +127,17 @@ export function Analytics() {
               </div>
             </Card>
 
-            {/* Only show satisfaction trend for admins */}
-            {isAdmin && <SatisfactionTrend />}
+            {/* Only show satisfaction trend and daily metrics for admins */}
+            {isAdmin && (
+              <>
+                <div className="col-span-2">
+                  <DailyMetricsCard />
+                </div>
+                <div className="col-span-2">
+                  <SatisfactionTrend />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Agent Performance - Only visible to admins */}

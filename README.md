@@ -43,6 +43,8 @@ A modern, AI-powered helpdesk system built with React, TypeScript, Supabase, and
 - 📊 Dedicated Analytics Dashboard
   - Ticket volume by status (pie chart)
   - Ticket activity trends (30-day line chart)
+  - Daily metrics with acceptance/rejection rates
+  - Top rejection reasons analysis
   - Real-time data updates
   - Role-based access (Admin/Agent only)
 - 📊 Customer Statistics

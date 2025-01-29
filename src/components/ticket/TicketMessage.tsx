@@ -7,6 +7,7 @@ import { Trash2 } from 'lucide-react';
 import { createMessageAttachment } from '@/lib/ticket-attachments';
 import type { FileUploadResponse } from '@/lib/file-upload';
 import { HelpMessage } from './HelpMessage';
+import { cn } from '@/lib/utils';
 
 interface TicketMessageProps {
   message: {
@@ -125,64 +126,90 @@ export function TicketMessage({
       return <div className="mt-2 whitespace-pre-wrap">{message.content}</div>;
   };
 
+  const isCustomer = !isAgent && !isCurrentUser;
+
   return (
-    <Card className="p-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="font-medium">{message.user.fullName}</div>
-          <div className="text-sm text-muted-foreground">
-            {message.createdAt.toLocaleString()}
-          </div>
-        </div>
-        {(isCurrentUser || isAgent) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
-      {renderMessageContent()}
-
-      {message.attachments && message.attachments.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {message.attachments.map((attachment) => (
-            <div
-              key={attachment.id}
-              className="flex items-center justify-between rounded-md border p-2"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{attachment.fileName}</span>
-                <span className="text-sm text-muted-foreground">
-                  ({Math.round(attachment.fileSize / 1024)}KB)
-                </span>
-              </div>
-              {(isCurrentUser || isAgent) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAttachmentDelete(attachment.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
+    <div className={cn("flex w-full", {
+      "justify-end": isCustomer,
+      "justify-start": !isCustomer
+    })}>
+      <Card className={cn("p-4 max-w-[80%]", {
+        "bg-primary/10": isCustomer
+      })}>
+        <div className={cn("flex items-start gap-4", {
+          "flex-row-reverse": isCustomer
+        })}>
+          <div className={cn("flex-1", {
+            "text-right": isCustomer
+          })}>
+            <div className="font-medium">{message.user.fullName}</div>
+            <div className="text-sm text-muted-foreground">
+              {message.createdAt.toLocaleString()}
             </div>
-          ))}
-        </div>
-      )}
+            <div className={cn("mt-2 whitespace-pre-wrap", {
+              "text-right": isCustomer
+            })}>
+              {renderMessageContent()}
+            </div>
+          </div>
 
-      {(isCurrentUser || isAgent) && (
-        <div className="mt-4">
-          <FileAttachment
-            onFileUploaded={handleFileUpload}
-            disabled={isDeleting}
-          />
+          {(isCurrentUser || isAgent) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="shrink-0"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
-      )}
-    </Card>
+
+        {message.attachments && message.attachments.length > 0 && (
+          <div className={cn("mt-4 space-y-2", {
+            "text-right": isCustomer
+          })}>
+            {message.attachments.map((attachment) => (
+              <div
+                key={attachment.id}
+                className={cn("flex items-center gap-4 rounded-md border p-2", {
+                  "flex-row-reverse": isCustomer
+                })}
+              >
+                <div className={cn("flex items-center gap-2", {
+                  "flex-row-reverse": isCustomer
+                })}>
+                  <span className="text-sm font-medium">{attachment.fileName}</span>
+                  <span className="text-sm text-muted-foreground">
+                    ({Math.round(attachment.fileSize / 1024)}KB)
+                  </span>
+                </div>
+                {(isCurrentUser || isAgent) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleAttachmentDelete(attachment.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {(isCurrentUser || isAgent) && (
+          <div className={cn("mt-4", {
+            "text-right": isCustomer
+          })}>
+            <FileAttachment
+              onFileUploaded={handleFileUpload}
+              disabled={isDeleting}
+            />
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }

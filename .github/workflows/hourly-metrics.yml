@@ -2,43 +2,62 @@ name: Hourly Metrics Aggregation
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Run every hour at minute 0
+    - cron: '5 * * * *'  # Run at 5 minutes past every hour
   workflow_dispatch:      # Allow manual trigger for testing
 
 jobs:
   aggregate-metrics:
     runs-on: ubuntu-latest
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     
     steps:
       - name: Run Hourly Metrics Aggregation
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          # Call the schedule_hourly_metrics function
           curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/json" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/schedule_hourly_metrics"
+            "${SUPABASE_URL}/rest/v1/rpc/schedule_hourly_metrics"
 
-      - name: Check Execution Status
+      - name: Verify Execution
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           # Wait a few seconds for the metrics to be computed
           sleep 5
           
           # Query the last execution status
           RESPONSE=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/json" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/cron_job_log?select=status,message,metadata&order=created_at.desc&limit=1")
+            "${SUPABASE_URL}/rest/v1/cron_job_log?select=status,message,metadata&order=created_at.desc&limit=1")
+          
+          # Print the response for debugging
+          echo "Execution Response:"
+          echo "$RESPONSE" | jq '.'
           
           # Check if the last execution was successful
           if echo "$RESPONSE" | grep -q '"status":"completed"'; then
-            echo "Metrics aggregation completed successfully"
-            echo "Details: $RESPONSE"
+            echo "✅ Metrics aggregation completed successfully"
           else
-            echo "Metrics aggregation may have failed"
-            echo "Details: $RESPONSE"
+            echo "❌ Metrics aggregation may have failed"
             exit 1
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"❌ Hourly metrics aggregation failed! Please check the GitHub Actions logs.\"}" \
+              $SLACK_WEBHOOK_URL
+          else
+            echo "Metrics aggregation failed! No Slack webhook configured."
           fi 

@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { boolean, integer, jsonb, pgTable, real, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { boolean, integer, jsonb, pgTable, real, text, timestamp, uuid, varchar, numeric, unique, index } from 'drizzle-orm/pg-core';
 
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -117,6 +117,27 @@ export const ticketMessageAttachments = pgTable('ticket_message_attachments', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+export const aggregatedMetrics = pgTable('aggregated_metrics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  metricType: text('metric_type').notNull(),
+  metricName: text('metric_name').notNull(),
+  metricValue: numeric('metric_value').notNull(),
+  dimension: text('dimension'),
+  dimensionValue: text('dimension_value'),
+  periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+  periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  metadata: jsonb('metadata').default('{}')
+}, (table) => ({
+  uniqueMetric: unique().on(
+    table.metricType,
+    table.metricName,
+    table.dimension,
+    table.dimensionValue,
+    table.periodStart
+  )
+}));
+
 export const aiSuggestions = pgTable('ai_suggestions', {
   id: uuid('id').primaryKey().defaultRandom(),
   ticketId: uuid('ticket_id').notNull().references(() => tickets.id),
@@ -124,11 +145,15 @@ export const aiSuggestions = pgTable('ai_suggestions', {
   confidenceScore: real('confidence_score').notNull(),
   systemUserId: uuid('system_user_id').references(() => profiles.id),
   metadata: jsonb('metadata').default('{}'),
-  status: text('status').notNull().default('pending'),
-  feedback: text('feedback'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
-});
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  messageId: uuid('message_id').references(() => ticketMessages.id),
+  status: text('status').notNull().default('pending'),
+  feedback: text('feedback')
+}, (table) => ({
+  ticketIdIdx: index('idx_ai_suggestions_ticket_id').on(table.ticketId),
+  systemUserIdIdx: index('idx_ai_suggestions_system_user_id').on(table.systemUserId)
+}));
 
 export const aiFeedbackEvents = pgTable('ai_feedback_events', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -237,10 +262,20 @@ export const ticketMessageAttachmentsRelations = relations(ticketMessageAttachme
   })
 }));
 
+export const aggregatedMetricsRelations = relations(aggregatedMetrics, ({ }) => ({}));
+
 export const aiSuggestionsRelations = relations(aiSuggestions, ({ one, many }) => ({
   ticket: one(tickets, {
     fields: [aiSuggestions.ticketId],
     references: [tickets.id]
+  }),
+  message: one(ticketMessages, {
+    fields: [aiSuggestions.messageId],
+    references: [ticketMessages.id]
+  }),
+  systemUser: one(profiles, {
+    fields: [aiSuggestions.systemUserId],
+    references: [profiles.id]
   }),
   feedbackEvents: many(aiFeedbackEvents)
 }));
