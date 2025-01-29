@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { AIMessageSuggestion } from '@/types/ai-suggestion';
+import { AIMessageSuggestion, FeedbackReason } from '@/types/ai-suggestion';
 import { ChevronDown, ChevronUp, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from './ui/badge';
@@ -14,7 +14,7 @@ interface AISuggestionCardProps {
   status: 'loading' | 'success' | 'error';
   error?: string;
   onAccept: (text: string) => void;
-  onReject: (reason: string, additionalFeedback?: string) => void;
+  onReject: (feedback: { reason: FeedbackReason; additionalFeedback?: string }) => void;
   className?: string;
 }
 
@@ -40,8 +40,8 @@ export function AISuggestionCard({
     }
   };
 
-  const handleReject = (feedback: { reason: string; additionalFeedback?: string }) => {
-    onReject(feedback.reason, feedback.additionalFeedback);
+  const handleReject = (feedback: { reason: FeedbackReason; additionalFeedback?: string }) => {
+    onReject(feedback);
     setShowFeedback(false);
   };
 

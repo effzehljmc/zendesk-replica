@@ -69,7 +69,7 @@ export async function updateAISuggestionFeedback(feedback: AIFeedback): Promise<
     .from('ai_suggestions')
     .update({
       status: feedback.feedback_type === 'approval' ? 'accepted' : 'rejected',
-      feedback: feedback.additional_feedback,
+      metadata: feedback.metadata,
       updated_at: feedback.updated_at
     })
     .eq('id', feedback.suggestion_id);

@@ -98,6 +98,45 @@ export function useTicketMessages(ticketId: string) {
       // Add the message to context
       addMessage(ticketId, transformedMessage);
 
+      // If this is a customer message (NOT AI generated), wait a moment and then call the edge function
+      if (!data.isAIGenerated && profile.roles?.some(role => role.name === 'customer')) {
+        // Wait 100ms to ensure trigger completes
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        try {
+          // Find the suggestion created by trigger
+          const { data: suggestion, error: suggestionError } = await supabase
+            .from('ai_suggestions')
+            .select()
+            .eq('message_id', newMessage.id)
+            .single();
+
+          if (suggestionError) {
+            console.error('Error finding suggestion:', suggestionError);
+            // Don't throw here - just log the error and continue
+            // This allows agent messages to work even if suggestion lookup fails
+          } else {
+            // Only call edge function if we found a suggestion
+            const { error: functionError } = await supabase.functions.invoke('generate-message-suggestion', {
+              body: {
+                message_id: newMessage.id,
+                ticket_id: ticketId,
+                suggestion_id: suggestion.id,
+                system_user_id: suggestion.system_user_id
+              }
+            });
+
+            if (functionError) {
+              console.error('Error calling edge function:', functionError);
+              // Don't throw here either
+            }
+          }
+        } catch (err) {
+          // Log but don't throw
+          console.error('Error processing suggestion:', err);
+        }
+      }
+
       toast({
         title: 'Success',
         description: 'Message sent successfully',

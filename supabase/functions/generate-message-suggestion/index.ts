@@ -14,28 +14,42 @@ interface RequestBody {
   system_user_id: string
 }
 
+// Add retry helper
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  maxAttempts: number = 3,
+  delayMs: number = 2000
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      if (attempt > 1) {
+        console.log(`Attempt ${attempt}/${maxAttempts} to find suggestion...`)
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+      }
+      return await operation()
+    } catch (error) {
+      if (attempt === maxAttempts) throw error
+      console.log(`Attempt ${attempt} failed, retrying in ${delayMs}ms...`, error)
+    }
+  }
+  throw new Error('Should not reach here')
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Log request
-    console.log('Received request:', await req.clone().json())
-
-    // Log environment variables (without exposing sensitive values)
-    console.log('Environment check:', {
-      hasSupabaseUrl: !!Deno.env.get('SUPABASE_URL'),
-      hasServiceRoleKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
-      hasOpenAIKey: !!Deno.env.get('OPENAI_API_KEY')
-    })
+    const startTime = new Date().toISOString()
+    const requestBody = await req.clone().json()
+    console.log('Received request at', startTime, ':', requestBody)
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Switch to direct fetch like generate-response
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
     if (!openaiApiKey) {
       throw new Error('OpenAI API key not found')
@@ -43,7 +57,22 @@ serve(async (req) => {
 
     const { ticket_id, message_id, suggestion_id, system_user_id }: RequestBody = await req.json()
 
-    console.log('Processing message:', { ticket_id, message_id, suggestion_id, system_user_id })
+    // Single quick check for the suggestion
+    const { data: suggestion, error: suggestionError } = await supabaseClient
+        .from('ai_suggestions')
+        .select('id, status, suggested_response, metadata')
+        .eq('id', suggestion_id)
+      .single()
+      
+    if (suggestionError || !suggestion) {
+      console.error('Error finding suggestion:', suggestionError)
+      throw new Error(`Cannot find suggestion with ID ${suggestion_id}`)
+    }
+
+    if (suggestion.status !== 'pending' || suggestion.suggested_response !== 'Processing...') {
+      console.error('Suggestion in unexpected state:', suggestion)
+      throw new Error(`Suggestion ${suggestion_id} is not in expected state`)
+    }
 
     // Get ticket details and message history
     const { data: ticket, error: ticketError } = await supabaseClient
@@ -56,11 +85,6 @@ serve(async (req) => {
       console.error('Error fetching ticket:', ticketError)
       throw ticketError
     }
-
-    console.log('Retrieved ticket:', { 
-      id: ticket.id, 
-      messageCount: ticket.messages?.length 
-    })
 
     // Format message history for context
     const messageHistory = ticket.messages
@@ -81,61 +105,75 @@ Provide a concise, professional, and helpful response that addresses the custome
 
     console.log('Sending request to OpenAI')
     
-    // Use direct fetch like generate-response
     const completion = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [{ role: 'system', content: prompt }],
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
-        max_tokens: 500,
+        max_tokens: 150,
       }),
     })
 
     const response = await completion.json()
-    console.log('OpenAI response received')
-
-    const suggestedResponse = response.choices[0].message?.content
-
-    if (!suggestedResponse) {
-      console.error('No suggestion in response:', response)
-      throw new Error('No suggestion generated')
+    if (!response.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from OpenAI')
     }
 
-    // Update the existing suggestion instead of creating a new one
-    const { data: suggestion, error: suggestionError } = await supabaseClient
-      .rpc('update_ai_suggestion', {
-        p_suggestion_id: suggestion_id,
-        p_suggested_response: suggestedResponse,
-        p_confidence_score: 0.9,
-        p_metadata: {
-          message_id,
-          model: 'gpt-4',
-          prompt,
+    const suggestedResponse = response.choices[0].message.content.trim()
+
+    // Log the current state before update
+    const { data: currentState } = await supabaseClient
+      .from('ai_suggestions')
+      .select('*')
+      .eq('id', suggestion_id)
+      .single()
+    
+    console.log('Current suggestion state before update:', currentState)
+
+    // Update the suggestion with the generated response - only check ID
+    const { data: updateResult, error: updateError } = await supabaseClient
+      .from('ai_suggestions')
+      .update({
+        suggested_response: suggestedResponse,
+        status: 'completed',
+        confidence_score: 0.9,
+        metadata: {
+          ...suggestion.metadata,
+          completion_time: new Date().toISOString(),
+          model: 'gpt-3.5-turbo'
         }
       })
+      .eq('id', suggestion_id)
+      .select()
       .single()
 
-    if (suggestionError) {
-      console.error('Error updating suggestion:', suggestionError)
-      throw suggestionError
+    if (updateError) {
+      console.error('Error updating suggestion:', updateError)
+      throw updateError
     }
 
-    console.log('Suggestion updated successfully:', suggestion.id)
+    console.log('Successfully updated suggestion:', updateResult)
 
-    return new Response(JSON.stringify(suggestion), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
+    return new Response(
+      JSON.stringify({ success: true, data: updateResult }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
   } catch (error) {
-    console.error('Function error:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
+    console.error('Error in edge function:', error)
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
   }
 })

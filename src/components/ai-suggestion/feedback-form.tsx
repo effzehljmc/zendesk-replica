@@ -9,21 +9,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { FeedbackReason } from "@/types/ai-suggestion";
 
 interface FeedbackFormProps {
-  onSubmit: (feedback: { reason: string; additionalFeedback?: string }) => void;
+  onSubmit: (feedback: { reason: FeedbackReason; additionalFeedback?: string }) => void;
   onCancel: () => void;
 }
 
-const FEEDBACK_REASONS = [
+const FEEDBACK_REASONS: { value: FeedbackReason; label: string }[] = [
   { value: "irrelevant", label: "Irrelevant" },
   { value: "off-topic", label: "Off-topic" },
   { value: "incorrect_info", label: "Incorrect Information" },
   { value: "too_generic", label: "Too Generic" },
-] as const;
+];
 
 export function FeedbackForm({ onSubmit, onCancel }: FeedbackFormProps) {
-  const [reason, setReason] = useState<string>("");
+  const [reason, setReason] = useState<FeedbackReason | "">("");
   const [additionalFeedback, setAdditionalFeedback] = useState("");
 
   const handleSubmit = () => {
@@ -40,7 +41,7 @@ export function FeedbackForm({ onSubmit, onCancel }: FeedbackFormProps) {
         <Label htmlFor="reason">Why are you rejecting this suggestion?</Label>
         <Select
           value={reason}
-          onValueChange={setReason}
+          onValueChange={(value) => setReason(value as FeedbackReason)}
         >
           <SelectTrigger id="reason">
             <SelectValue placeholder="Select a reason" />

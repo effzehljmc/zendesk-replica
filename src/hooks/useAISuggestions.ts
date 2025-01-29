@@ -1,5 +1,5 @@
 import { useSupabase } from '@/components/providers/supabase-provider';
-import { AIFeedback, AIMessageSuggestion } from '@/types/ai-suggestion';
+import { AIFeedback, AIMessageSuggestion, FeedbackReason } from '@/types/ai-suggestion';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useUser } from '@/hooks/useUser';
@@ -224,25 +224,36 @@ export function useAISuggestions(ticketId: string) {
   );
 
   const rejectSuggestion = useCallback(
-    async (suggestion_id: string, reason: string, additionalFeedback?: string) => {
+    async (suggestion_id: string, reason: FeedbackReason, additionalFeedback?: string) => {
       const now = new Date().toISOString();
       const feedback: AIFeedback = {
         suggestion_id,
         ticket_id: ticketId,
         feedback_type: 'rejection',
-        feedback_reason: reason as AIFeedback['feedback_reason'],
+        feedback_reason: reason,
         metadata: additionalFeedback ? { additional_feedback: additionalFeedback } : undefined,
         updated_at: now
       };
 
       try {
+        // First update local state to ensure UI is responsive
+        setSuggestions(currentSuggestions => 
+          currentSuggestions.filter(s => s.suggestion.id !== suggestion_id)
+        );
+
+        // Then update the database
         await storeFeedback(feedback);
       } catch (error) {
+        // If database update fails, revert the local state
         console.error('Error rejecting suggestion:', error);
+        const failedSuggestion = suggestions.find(s => s.suggestion.id === suggestion_id);
+        if (failedSuggestion) {
+          setSuggestions(current => [...current, failedSuggestion]);
+        }
         throw error;
       }
     },
-    [ticketId, storeFeedback]
+    [ticketId, storeFeedback, suggestions]
   );
 
   return {

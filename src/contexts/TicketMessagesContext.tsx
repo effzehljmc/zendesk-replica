@@ -30,7 +30,6 @@ function transformMessage(message: TicketMessageResponse): TicketMessage {
     content: message.content,
     createdAt: new Date(message.created_at),
     userId: message.user_id,
-    messageType: message.message_type,
     isAIGenerated: message.is_ai_generated,
     user: {
       id: message.user_id,
@@ -125,8 +124,10 @@ export function TicketMessagesProvider({ children }: { children: ReactNode }) {
         },
         async (payload: RealtimePostgresChangesPayload<TicketMessageResponse>) => {
           console.log('Received message update:', payload.eventType, 'for ticket:', ticketId);
+          console.log('Payload data:', JSON.stringify(payload, null, 2));
           
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            // Fetch full message data including profiles
             const { data: messageData, error: messageError } = await supabase
               .from('ticket_messages')
               .select(`

@@ -2,6 +2,7 @@ import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { useTicketMessages } from '@/hooks/useTicketMessages';
 import { AISuggestionCard } from './AISuggestionCard';
 import { useEffect } from 'react';
+import { FeedbackReason } from '@/types/ai-suggestion';
 
 interface AISuggestionsProps {
   ticketId: string;
@@ -41,10 +42,10 @@ export function AISuggestions({ ticketId, className }: AISuggestionsProps) {
     }
   };
 
-  const handleReject = async (suggestionId: string, feedback?: string) => {
+  const handleReject = async (suggestionId: string, feedback: { reason: FeedbackReason; additionalFeedback?: string }) => {
     try {
       // Store feedback and mark as rejected
-      await rejectSuggestion(suggestionId, 'irrelevant', feedback);
+      await rejectSuggestion(suggestionId, feedback.reason, feedback.additionalFeedback);
     } catch (error) {
       console.error('Failed to reject suggestion:', error);
     }
