@@ -169,6 +169,21 @@ export const aiFeedbackEvents = pgTable('ai_feedback_events', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+export const prioritySuggestions = pgTable('priority_suggestions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ticketId: uuid('ticket_id').notNull().references(() => tickets.id),
+  suggestedPriority: text('suggested_priority').notNull(),
+  confidenceScore: real('confidence_score').notNull(),
+  systemUserId: uuid('system_user_id').references(() => profiles.id),
+  metadata: jsonb('metadata').default('{}'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  status: text('status').notNull().default('pending')
+}, (table) => ({
+  ticketIdIdx: index('idx_priority_suggestions_ticket_id').on(table.ticketId),
+  systemUserIdIdx: index('idx_priority_suggestions_system_user_id').on(table.systemUserId)
+}));
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   userRoles: many(userRoles),
@@ -192,7 +207,8 @@ export const ticketsRelations = relations(tickets, ({ one, many }) => ({
   }),
   notes: many(ticketNotes),
   tags: many(ticketTags),
-  messages: many(ticketMessages)
+  messages: many(ticketMessages),
+  prioritySuggestions: many(prioritySuggestions)
 }));
 
 export const ticketNotesRelations = relations(ticketNotes, ({ one }) => ({
@@ -291,6 +307,17 @@ export const aiFeedbackEventsRelations = relations(aiFeedbackEvents, ({ one }) =
   }),
   agent: one(profiles, {
     fields: [aiFeedbackEvents.agentId],
+    references: [profiles.id]
+  })
+}));
+
+export const prioritySuggestionsRelations = relations(prioritySuggestions, ({ one }) => ({
+  ticket: one(tickets, {
+    fields: [prioritySuggestions.ticketId],
+    references: [tickets.id]
+  }),
+  systemUser: one(profiles, {
+    fields: [prioritySuggestions.systemUserId],
     references: [profiles.id]
   })
 }));
