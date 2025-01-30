@@ -36,7 +36,7 @@ export function DailyMetricsCard() {
     return (
       <Card className="col-span-2">
         <CardHeader>
-          <CardTitle>Daily Metrics</CardTitle>
+          <CardTitle>Daily AI Suggestions Feedback</CardTitle>
         </CardHeader>
         <CardContent>Loading...</CardContent>
       </Card>
@@ -47,7 +47,7 @@ export function DailyMetricsCard() {
     return (
       <Card className="col-span-2">
         <CardHeader>
-          <CardTitle>Daily Metrics</CardTitle>
+          <CardTitle>Daily AI Suggestions Feedback</CardTitle>
         </CardHeader>
         <CardContent className="text-red-500">
           Error loading metrics: {error.message}
@@ -73,7 +73,7 @@ export function DailyMetricsCard() {
   return (
     <Card className="col-span-2">
       <CardHeader>
-        <CardTitle>Daily Metrics</CardTitle>
+        <CardTitle>Daily AI Suggestions Feedback</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

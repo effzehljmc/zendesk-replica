@@ -3,6 +3,14 @@ import { AIFeedback, AIMessageSuggestion, FeedbackReason } from '@/types/ai-sugg
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useUser } from '@/hooks/useUser';
+import langfuse from '@/lib/langfuse/client';
+
+interface TicketMessage {
+  id: string;
+  content: string;
+  is_ai_generated: boolean;
+  created_at: string;
+}
 
 export interface SuggestionState {
   suggestion: AIMessageSuggestion;
@@ -163,9 +171,78 @@ export function useAISuggestions(ticketId: string) {
         }
       }
 
+      const { data: suggestion } = await supabase
+        .from('ai_suggestions')
+        .select('*')
+        .eq('id', feedback.suggestion_id)
+        .single();
+
+      if (!suggestion) {
+        throw new Error('Suggestion not found');
+      }
+
+      const { data: ticket } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          messages:ticket_messages(
+            id,
+            content,
+            is_ai_generated,
+            created_at
+          )
+        `)
+        .eq('id', feedback.ticket_id)
+        .single();
+
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+
       const now = new Date().toISOString();
+      const feedbackStartTime = new Date().getTime();
+
+      const feedbackTrace = langfuse.trace({
+        name: 'suggestion-feedback',
+        sessionId: suggestion?.metadata?.trace_id,
+        input: {
+          original_suggestion: {
+            id: suggestion.id,
+            content: suggestion.suggested_response,
+            model: suggestion.metadata?.model,
+            created_at: suggestion.created_at
+          },
+          ticket_context: {
+            id: ticket.id,
+            title: ticket.title,
+            description: ticket.description,
+            priority: ticket.priority,
+            conversation_history: ticket.messages
+              .sort((a: TicketMessage, b: TicketMessage) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+              .map((msg: TicketMessage) => ({
+                content: msg.content,
+                is_ai_generated: msg.is_ai_generated,
+                created_at: msg.created_at,
+                type: msg.is_ai_generated ? 'agent' : 'customer'
+              }))
+          },
+          feedback: {
+            type: feedback.feedback_type,
+            reason: feedback.feedback_reason,
+            agent_id: user.id
+          }
+        }
+      });
       
       // First update the suggestion status
+      const suggestionSpan = feedbackTrace.span({ 
+        name: 'update-suggestion-status',
+        input: {
+          suggestion_id: feedback.suggestion_id,
+          new_status: feedback.feedback_type === 'approval' ? 'accepted' : 'rejected',
+          timestamp: now
+        }
+      });
       const { error: suggestionError } = await supabase
         .from('ai_suggestions')
         .update({
@@ -175,11 +252,27 @@ export function useAISuggestions(ticketId: string) {
         .eq('id', feedback.suggestion_id);
 
       if (suggestionError) {
+        suggestionSpan.update({ 
+          metadata: { error: suggestionError, level: 'error' }
+        });
         console.error('Error updating suggestion status:', suggestionError);
         throw suggestionError;
       }
+      suggestionSpan.update({ metadata: { level: 'success' } });
 
       // Then store the feedback
+      const feedbackSpan = feedbackTrace.span({ 
+        name: 'store-feedback-event',
+        input: {
+          suggestion_id: feedback.suggestion_id,
+          ticket_id: feedback.ticket_id,
+          agent_id: user.id,
+          feedback_type: feedback.feedback_type,
+          feedback_reason: feedback.feedback_reason || null,
+          agent_response: feedback.agent_response || null,
+          metadata: feedback.metadata
+        }
+      });
       const { error: feedbackError } = await supabase
         .from('ai_feedback_events')
         .insert({
@@ -190,15 +283,67 @@ export function useAISuggestions(ticketId: string) {
           feedback_reason: feedback.feedback_reason || null,
           agent_response: feedback.agent_response || null,
           time_to_feedback: '0 seconds', // Default interval value
-          metadata: feedback.metadata || {},
+          metadata: {
+            ...feedback.metadata,
+            trace_id: feedbackTrace.id // Store feedback trace ID
+          },
           created_at: now,
           updated_at: now
         });
 
       if (feedbackError) {
+        feedbackSpan.update({ 
+          metadata: { error: feedbackError, level: 'error' }
+        });
         console.error('Error storing feedback event:', feedbackError);
         throw feedbackError;
       }
+      feedbackSpan.update({ metadata: { level: 'success' } });
+
+      const feedbackEndTime = new Date().getTime();
+      const feedbackProcessingTime = feedbackEndTime - feedbackStartTime;
+      const timeToFeedback = new Date(now).getTime() - new Date(suggestion.created_at).getTime();
+
+      // Update the trace with final status
+      await feedbackTrace.update({
+        output: {
+          feedback_result: {
+            status: 'processed',
+            feedback_type: feedback.feedback_type,
+            processed_at: now,
+            processing_time_ms: feedbackProcessingTime,
+            metrics: {
+              time_to_feedback_ms: timeToFeedback,
+              was_edited: suggestion.updated_at !== suggestion.created_at,
+              partial_use: feedback.metadata?.partial_use || false,
+              quality_score: feedback.feedback_type === 'approval' ? 1.0 : 0.0
+            }
+          },
+          suggestion_update: {
+            new_status: feedback.feedback_type === 'approval' ? 'accepted' : 'rejected',
+            update_timestamp: now,
+            was_edited: suggestion.updated_at !== suggestion.created_at,
+            agent_response: feedback.agent_response,
+            edit_distance: feedback.agent_response ? 
+              calculateEditDistance(suggestion.suggested_response, feedback.agent_response) : 
+              null
+          },
+          performance_analysis: {
+            response_length: suggestion.suggested_response.length,
+            response_tokens: suggestion.metadata?.tokens_used?.total_tokens || 0,
+            processing_time_ms: feedbackProcessingTime,
+            total_interaction_time_ms: timeToFeedback + feedbackProcessingTime
+          }
+        },
+        metadata: {
+          completion_time: now,
+          trace_id: feedbackTrace.id,
+          environment: process.env.NODE_ENV
+        }
+      });
+
+      // Make sure to flush events before returning
+      await langfuse.flushAsync();
     },
     [supabase, user?.id]
   );
@@ -265,4 +410,21 @@ export function useAISuggestions(ticketId: string) {
     acceptSuggestion,
     rejectSuggestion,
   };
+}
+
+// Add helper function for edit distance calculation
+function calculateEditDistance(str1: string, str2: string): number {
+  const m = str1.length;
+  const n = str2.length;
+  const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) {
+    for (let j = 0; j <= n; j++) {
+      if (i === 0) dp[i][j] = j;
+      else if (j === 0) dp[i][j] = i;
+      else if (str1[i - 1] === str2[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+      else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
 }

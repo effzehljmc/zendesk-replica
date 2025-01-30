@@ -18,7 +18,7 @@ export function MainNav() {
     <header className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold">Zendesk Clone</span>
+          <span className="text-2xl font-bold">AutoCRM</span>
         </div>
         
         <div className="flex items-center gap-4">
